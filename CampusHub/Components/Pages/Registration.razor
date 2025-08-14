@@ -1,0 +1,74 @@
+﻿@page "/Registration"
+
+<div class="container">
+    <img alt="University of Caloocan City official logo"
+         class="logo"
+         height="80"
+         src="images/UCC_logo.png"
+         width="64" />
+
+    <h1 class="title">Campus Hub</h1>
+    <h2 class="subtitle">University of Caloocan City</h2>
+
+    <EditForm class="form" Model="student" OnValidSubmit="@HandleValidSubmit" FormName="FormModel">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <p class="form-title">Student Verification</p>
+        <p class="form-subtitle">Enter your student information to Sign In</p>
+
+        <label class="label" for="fullName">Full Name:</label>
+        <InputText class="input" id="fullName" @bind-Value="student.FullName" />
+        <ValidationMessage For="@(() => student.FullName)" />
+
+        <label class="label" for="userName">Username:</label>
+        <InputText class="input" id="userName" @bind-Value="student.Username" />
+        <ValidationMessage For="@(() => student.Username)" />
+
+        <label class="label" for="studentNumber">Student Number:</label>
+        <InputText class="input" id="studentNumber" @bind-Value="student.StudentNumber" />
+        <ValidationMessage For="@(() => student.StudentNumber)" />
+
+        <label class="label" for="emailAddress">Email Address:</label>
+        <InputText class="input" id="emailAddress" @bind-Value="student.Email" />
+        <ValidationMessage For="@(() => student.Email)" />
+
+        <label class="label" for="contactNumber">Contact Number:</label>
+        <InputText class="input" id="studentNumber" @bind-Value="student.ContactNumber" />
+        <ValidationMessage For="@(() => student.ContactNumber)" />
+
+        <label class="label" for="yearLevel">Year:</label>
+        <InputSelect class="input" id="yearLevel" @bind-Value="student.YearLevelId">
+            <option value="">Select your year</option>
+            @foreach (var year in YearLevel)
+            {
+                <option value="@year.YearID">@year.YearName</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => student.YearLevelId)" />
+
+        <label class="label" for="program">Program:</label>
+        <InputSelect class="input" id="program" @bind-Value="student.ProgramID">
+            <option value="">Select your program</option>
+            @foreach (var program in ProgramCourse)
+            {
+                <option value="@program.ProgramID">@program.ProgramName</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => student.ProgramID)" />
+
+        <label class="label" for="password">Password:</label>
+        <InputText class="input" id="password" type="password" @bind-Value="student.Password" />
+        <ValidationMessage For="@(() => student.Password)" />
+
+        <button class="btn-register" type="submit">Register</button>
+
+        <p class="form-footer">
+            Already have an account? <a class="link" href="/">Login</a>
+        </p>
+    </EditForm>
+</div>
+
+
+@code {   
+}

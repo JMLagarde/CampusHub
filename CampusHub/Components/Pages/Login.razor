@@ -1,0 +1,73 @@
+﻿@page "/"
+@using UCC.Components.Layout
+@layout EmptyLayout
+
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using UCC.Components.Models
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager NavigationManager
+@inject UCCDatabaseContext _context
+
+<div class="container">
+    <img alt="University of Caloocan City official logo with green ribbon and shield containing sun and torch"
+         class="logo"
+         height="80"
+         src="images/UCC_logo.png"
+         width="64" />
+
+    <h1 class="title">Campus Hub</h1>
+    <h2 class="subtitle">University of Caloocan City</h2>
+
+    <EditForm class="form" Model="loginModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <p class="form-title">Student Verification</p>
+        <p class="form-subtitle">Enter your student number to access the platform</p>
+
+        <label class="label" for="studentNumber">Student Number:</label>
+        <InputText class="input" id="studentNumber" @bind-Value="loginModel.StudentNumber" />
+        <ValidationMessage For="@(() => loginModel.StudentNumber)" />
+
+        <label class="label" for="password">Password:</label>
+        <InputText class="input" id="password" type="password" @bind-Value="loginModel.Password" />
+        <ValidationMessage For="@(() => loginModel.Password)" />
+
+        <button class="btn-login" type="submit">Login</button>
+
+        <p class="form-footer">
+            Don’t have an account?
+            <NavLink class="link" href="/UserRegistration">Sign Up</NavLink>
+        </p>
+
+        @if (!string.IsNullOrEmpty(loginError))
+        {
+            <p class="error-message" style="color:red;">@loginError</p>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private LoginViewModel loginModel = new();
+    private string loginError = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        loginError = string.Empty;
+
+        var student = await _context.StudentRegistration
+            .FirstOrDefaultAsync(s =>
+                s.StudentNumber.Trim() == loginModel.StudentNumber.Trim()
+                && s.Password == loginModel.Password);
+
+        if (student != null)
+        {
+            NavigationManager.NavigateTo("/Home");
+        }
+        else
+        {
+            loginError = "Invalid student number or password.";
+        }
+    }
+}
