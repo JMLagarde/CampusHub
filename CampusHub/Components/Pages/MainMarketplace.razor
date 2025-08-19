@@ -1,0 +1,711 @@
+﻿@page "/main-marketplace"
+@layout Layout.MainLayout
+@using CampusHub.Application.DTO
+@using CampusHub.Application.Interfaces
+@using CampusHub.Domain.Entities
+@inject IMarketplaceService MarketplaceService
+@inject NavigationManager Navigation
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<div class="content-container">
+    <div class="content-header">
+        <div class="content-title">
+            <h2>UCC Campus Hub - Marketplace</h2>
+            <p class="content-subtitle">@MarketplaceItems.Count items available for purchase</p>
+        </div>
+        <button class="btn btn-primary" @onclick="ShowPostDialog">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Post Item
+        </button>
+    </div>
+
+    <div class="marketplace-filters">
+        <select class="search-input" @onchange="FilterByLocation">
+            <option value="">All Locations</option>
+            <option value="@((int)CampusLocation.MainCampus)">Main Campus</option>
+            <option value="@((int)CampusLocation.Congressional)">Congressional Extension Campus</option>
+            <option value="@((int)CampusLocation.BagongSilang)">Bagong Silang Extension Campus</option>
+            <option value="@((int)CampusLocation.Camarin)">Camarin Extension Campus</option>
+        </select>
+
+        <select class="search-input" @onchange="FilterByCategory">
+            <option value="">All Categories</option>
+            <option value="@((int)ItemCategory.Electronics)">Electronics</option>
+            <option value="@((int)ItemCategory.Books)">Books</option>
+            <option value="@((int)ItemCategory.Clothing)">Clothing</option>
+            <option value="@((int)ItemCategory.Furniture)">Furniture</option>
+            <option value="@((int)ItemCategory.Sports)">Sports</option>
+            <option value="@((int)ItemCategory.SchoolSupplies)">School Supplies</option>
+            <option value="@((int)ItemCategory.Food)">Food</option>
+            <option value="@((int)ItemCategory.Services)">Services</option>
+            <option value="@((int)ItemCategory.Other)">Other</option>
+        </select>
+    </div>
+
+    <div class="marketplace-grid">
+        @if (IsLoading)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Loading marketplace items...</p>
+            </div>
+        }
+        else if (MarketplaceItems.Any())
+        {
+            @foreach (var item in MarketplaceItems)
+            {
+                <div class="marketplace-card" @onclick="() => ShowProductDetails(item)" style="cursor: pointer;">
+                    <div class="item-image">
+                        <img src="@GetImageUrl(item.ImageUrl)" alt="@item.Title" onerror="this.src='https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop'">
+                        <div class="item-badges">
+                            <span class="badge @GetConditionBadgeClass(item.Condition.ToString())">@item.Condition</span>
+                            <span class="badge badge-category">@item.Category</span>
+                        </div>
+                        <button class="like-button @(item.IsLiked ? "liked" : "")" @onclick="(e) => ToggleLikeWithStopPropagation(e, item.Id)" @onclick:stopPropagation="true">
+                            <svg class="icon" viewBox="0 0 24 24" fill="@(item.IsLiked ? "currentColor" : "none")" stroke="currentColor">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="item-content">
+                        <div class="item-header">
+                            <h3 class="item-title">@item.Title</h3>
+                            <p class="item-price">₱@item.Price.ToString("N0")</p>
+                        </div>
+                        <p class="item-description">@item.Description</p>
+                        <div class="item-meta">
+                            <div class="item-location">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                @item.Location
+                            </div>
+                            <div class="item-date">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12,6 12,12 16,14" />
+                                </svg>
+                                @item.TimeAgo
+                            </div>
+                        </div>
+                        <div class="item-footer">
+                            <span class="item-seller">By @item.SellerName</span>
+                            <div class="item-actions">
+                                <div class="likes-count">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                    </svg>
+                                    @item.LikesCount
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <svg class="empty-icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+                <h3>No items available</h3>
+                <p>Be the first to post an item in the UCC Campus Hub marketplace!</p>
+                <button class="btn btn-primary" @onclick="ShowPostDialog">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Post Item
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@if (ShowProductDetailsDialog && SelectedProduct != null)
+{
+    <div class="dialog-overlay" @onclick="CloseProductDetails">
+        <div class="dialog-content product-details-dialog" @onclick:stopPropagation="true">
+            <div class="dialog-header">
+                <h3>Product Details</h3>
+                <button class="btn-icon dialog-close" @onclick="CloseProductDetails">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <div class="product-details-content">
+                    <div class="product-image-section">
+                        <div class="product-image-container">
+                            <img src="@GetImageUrl(SelectedProduct.ImageUrl)" alt="@SelectedProduct.Title" class="product-detail-image">
+                            <div class="item-badges">
+                                <span class="badge @GetConditionBadgeClass(SelectedProduct.Condition.ToString())">@SelectedProduct.Condition</span>
+                                <span class="badge badge-secondary">@SelectedProduct.Category</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-info-section">
+                        <div class="item-header">
+                            <h2 class="item-title">@SelectedProduct.Title</h2>
+                            <p class="item-price">₱@SelectedProduct.Price.ToString("N0")</p>
+                        </div>
+
+                        <div class="item-description">
+                            <h4>Description</h4>
+                            <p>@SelectedProduct.Description</p>
+                        </div>
+
+                        <div class="event-details">
+                            <div class="event-meta">
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <strong>Category:</strong>
+                                    <span>@SelectedProduct.Category</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <strong>Condition:</strong>
+                                    <span>@SelectedProduct.Condition</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                        <circle cx="12" cy="10" r="3" />
+                                    </svg>
+                                    <strong>Location:</strong>
+                                    <span>@SelectedProduct.Location</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <strong>Meetup Preference:</strong>
+                                    <span>@SelectedProduct.MeetupPreference</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <strong>Posted:</strong>
+                                    <span>@SelectedProduct.TimeAgo</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <strong>Seller:</strong>
+                                    <span>@SelectedProduct.SellerName</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="item-actions">
+                            <button class="btn btn-outline like-button @(SelectedProduct.IsLiked ? "liked" : "")" @onclick="() => ToggleLike(SelectedProduct.Id)">
+                                <svg class="icon" viewBox="0 0 24 24" fill="@(SelectedProduct.IsLiked ? "currentColor" : "none")" stroke="currentColor">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                </svg>
+                                @if (SelectedProduct.IsLiked)
+                                {
+                                    <span>Liked (@SelectedProduct.LikesCount)</span>
+                                }
+                                else
+                                {
+                                    <span>Like (@SelectedProduct.LikesCount)</span>
+                                }
+                            </button>
+                            <button class="btn btn-primary">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                    <polyline points="22,6 12,13 2,6" />
+                                </svg>
+                                Contact Seller
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (ShowPostItemDialog)
+{
+    <div class="dialog-overlay" @onclick="ClosePostDialog">
+        <div class="dialog-content" @onclick:stopPropagation="true">
+            <div class="dialog-header">
+                <h3>Post New Item</h3>
+                <button class="btn-icon dialog-close" @onclick="ClosePostDialog">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <EditForm Model="NewItem" OnValidSubmit="PostNewItem">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="validation-errors" />
+
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <InputText id="title" @bind-Value="NewItem.Title" placeholder="e.g., MacBook Pro 2021" />
+                        <ValidationMessage For="@(() => NewItem.Title)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <InputTextArea id="description" @bind-Value="NewItem.Description" placeholder="Describe your item in detail..." rows="3" />
+                        <ValidationMessage For="@(() => NewItem.Description)" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="price">Price (₱)</label>
+                            <InputNumber id="price" @bind-Value="NewItem.Price" placeholder="0" />
+                            <ValidationMessage For="@(() => NewItem.Price)" />
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <InputSelect id="category" @bind-Value="NewItem.Category">
+                                <option value="">Select category</option>
+                                <option value="@ItemCategory.Electronics">Electronics</option>
+                                <option value="@ItemCategory.Books">Books</option>
+                                <option value="@ItemCategory.Clothing">Clothing</option>
+                                <option value="@ItemCategory.Furniture">Furniture</option>
+                                <option value="@ItemCategory.Sports">Sports</option>
+                                <option value="@ItemCategory.SchoolSupplies">School Supplies</option>
+                                <option value="@ItemCategory.Food">Food</option>
+                                <option value="@ItemCategory.Services">Services</option>
+                                <option value="@ItemCategory.Other">Other</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => NewItem.Category)" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="condition">Condition</label>
+                            <InputSelect id="condition" @bind-Value="NewItem.Condition">
+                                <option value="">Select condition</option>
+                                <option value="@ItemCondition.BrandNew">Brand New</option>
+                                <option value="@ItemCondition.LikeNew">Like New</option>
+                                <option value="@ItemCondition.LightlyUsed">Lightly Used</option>
+                                <option value="@ItemCondition.WellUsed">Well Used</option>
+                                <option value="@ItemCondition.HeavilyUsed">Heavily Used</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => NewItem.Condition)" />
+                        </div>
+                        <div class="form-group">
+                            <label for="meetupPreference">Meetup Preference</label>
+                            <InputSelect id="meetupPreference" @bind-Value="NewItem.MeetupPreference">
+                                <option value="">Select meetup preference</option>
+                                <option value="@MeetupPreference.CampusOnly">Campus Only</option>
+                                <option value="@MeetupPreference.NearCampus">Near Campus</option>
+                                <option value="@MeetupPreference.Flexible">Flexible</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => NewItem.MeetupPreference)" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Campus Location</label>
+                        <InputSelect id="location" @bind-Value="NewItem.Location">
+                            <option value="">Select campus location</option>
+                            <option value="@CampusLocation.MainCampus">Main Campus</option>
+                            <option value="@CampusLocation.Congressional">Congressional Extension Campus</option>
+                            <option value="@CampusLocation.BagongSilang">Bagong Silang Extension Campus</option>
+                            <option value="@CampusLocation.Camarin">Camarin Extension Campus</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => NewItem.Location)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="image">Image URL (optional)</label>
+                        <InputText id="image" @bind-Value="NewItem.ImageUrl" placeholder="https://example.com/image.jpg" />
+                        <ValidationMessage For="@(() => NewItem.ImageUrl)" />
+                    </div>
+
+                    <div class="dialog-actions">
+                        <button type="button" class="btn btn-outline" @onclick="ClosePostDialog" disabled="@IsPosting">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsPosting">
+                            @if (IsPosting)
+                            {
+                                <div class="loading-spinner"></div>
+                                <span>Posting...</span>
+                            }
+                            else
+                            {
+                                <span>Post Item</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="toast toast-@MessageType">
+        <div class="toast-content">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                @if (MessageType == "success")
+                {
+                    <path d="M9 12l2 2 4-4" />
+                    <circle cx="12" cy="12" r="10" />
+                }
+                else
+                {
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                }
+            </svg>
+            <span>@Message</span>
+        </div>
+        <button class="btn-icon" @onclick="ClearMessage">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+    </div>
+}
+
+@code {
+    private List<MarketplaceItemDto> MarketplaceItems = new();
+    private List<MarketplaceItemDto> AllMarketplaceItems = new();
+    private CreateMarketplaceItemDto NewItem = new();
+    private bool ShowPostItemDialog = false;
+    private bool ShowProductDetailsDialog = false;
+    private MarketplaceItemDto? SelectedProduct = null;
+    private bool IsLoading = true;
+    private bool IsPosting = false;
+    private string Message = "";
+    private string MessageType = "";
+    private int? SelectedLocationFilter;
+    private int? SelectedCategoryFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMarketplaceItems();
+    }
+
+    private async Task LoadMarketplaceItems()
+    {
+        try
+        {
+            IsLoading = true;
+            StateHasChanged();
+
+            var currentUserId = await GetCurrentUserIdFromSession();
+
+            var items = await MarketplaceService.GetAllItemsAsync(currentUserId);
+            AllMarketplaceItems = items.ToList();
+            MarketplaceItems = AllMarketplaceItems.ToList();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error loading marketplace items: {ex.Message}", "error");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<int?> GetCurrentUserIdFromSession()
+    {
+        try
+        {
+            var userIdString = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userId");
+            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
+            {
+                return userId;
+            }
+        }
+        catch
+        {
+        }
+        return null;
+    }
+
+    private async Task<CurrentUserDto?> GetCurrentUserFromSession()
+    {
+        try
+        {
+            var userIdString = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userId");
+            var username = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "username");
+            var fullName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "fullName");
+            var role = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "role");
+            var email = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "email");
+
+            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
+            {
+                return new CurrentUserDto
+                {
+                    Id = userId,
+                    Username = username ?? "",
+                    FullName = fullName ?? "",
+                    Role = role ?? "",
+                    Email = email
+                };
+            }
+        }
+        catch
+        {
+
+        }
+        return null;
+    }
+
+    private void ShowPostDialog()
+    {
+        NewItem = new CreateMarketplaceItemDto();
+        ShowPostItemDialog = true;
+    }
+
+    private void ClosePostDialog()
+    {
+        ShowPostItemDialog = false;
+        NewItem = new CreateMarketplaceItemDto();
+    }
+
+    private void ShowProductDetails(MarketplaceItemDto product)
+    {
+        SelectedProduct = product;
+        ShowProductDetailsDialog = true;
+    }
+
+    private void CloseProductDetails()
+    {
+        ShowProductDetailsDialog = false;
+        SelectedProduct = null;
+    }
+
+    private async Task PostNewItem()
+    {
+        try
+        {
+            IsPosting = true;
+            StateHasChanged();
+
+            var currentUser = await GetCurrentUserFromSession();
+            if (currentUser == null)
+            {
+                ShowMessage("You must be logged in to post items", "error");
+                return;
+            }
+
+            NewItem.SellerId = currentUser.Id;
+            NewItem.SellerName = currentUser.FullName ?? currentUser.Username ?? "Unknown User";
+
+            var createdItem = await MarketplaceService.CreateItemAsync(NewItem);
+
+            ShowMessage("Item posted successfully!", "success");
+            ClosePostDialog();
+            await LoadMarketplaceItems(); 
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error posting item: {ex.Message}", "error");
+        }
+        finally
+        {
+            IsPosting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FilterByLocation(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value?.ToString();
+
+        if (string.IsNullOrEmpty(selectedValue))
+        {
+            SelectedLocationFilter = null;
+        }
+        else if (int.TryParse(selectedValue, out int locationId))
+        {
+            SelectedLocationFilter = locationId;
+        }
+
+        await ApplyFilters();
+    }
+
+    private async Task FilterByCategory(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value?.ToString();
+
+        if (string.IsNullOrEmpty(selectedValue))
+        {
+            SelectedCategoryFilter = null;
+        }
+        else if (int.TryParse(selectedValue, out int categoryId))
+        {
+            SelectedCategoryFilter = categoryId;
+        }
+
+        await ApplyFilters();
+    }
+
+    private async Task ApplyFilters()
+    {
+        try
+        {
+            var currentUserId = await GetCurrentUserIdFromSession();
+
+            if (SelectedLocationFilter == null && SelectedCategoryFilter == null)
+            {
+                var allItems = await MarketplaceService.GetAllItemsAsync(currentUserId);
+                MarketplaceItems = allItems.ToList();
+            }
+            else
+            {
+                var filteredItems = AllMarketplaceItems.AsQueryable();
+
+                if (SelectedLocationFilter.HasValue)
+                {
+                    var location = (CampusLocation)SelectedLocationFilter.Value;
+                    filteredItems = filteredItems.Where(i => i.Location == location.ToString());
+                }
+
+                if (SelectedCategoryFilter.HasValue)
+                {
+                    var category = (ItemCategory)SelectedCategoryFilter.Value;
+                    filteredItems = filteredItems.Where(i => i.Category == category);
+                }
+
+                MarketplaceItems = filteredItems.ToList();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error applying filters: {ex.Message}", "error");
+        }
+    }
+
+    private async Task ToggleLike(int itemId)
+    {
+        try
+        {
+            var currentUser = await GetCurrentUserFromSession();
+            if (currentUser == null)
+            {
+                ShowMessage("You must be logged in to like items", "error");
+                return;
+            }
+
+            var item = MarketplaceItems.FirstOrDefault(i => i.Id == itemId);
+            if (item == null) return;
+
+            var success = await MarketplaceService.ToggleLikeAsync(itemId, currentUser.Id);
+
+            if (success)
+            {
+                if (item.IsLiked)
+                {
+                    item.IsLiked = false;
+                    item.LikesCount = Math.Max(0, item.LikesCount - 1);
+                }
+                else
+                {
+                    item.IsLiked = true;
+                    item.LikesCount++;
+                }
+
+                if (SelectedProduct?.Id == itemId)
+                {
+                    SelectedProduct.IsLiked = item.IsLiked;
+                    SelectedProduct.LikesCount = item.LikesCount;
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                ShowMessage("Failed to update like status", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error updating like: {ex.Message}", "error");
+        }
+    }
+
+    private async Task ToggleLikeWithStopPropagation(MouseEventArgs e, int itemId)
+    {
+        await ToggleLike(itemId);
+    }
+
+    private string GetImageUrl(string? imageUrl)
+    {
+        if (string.IsNullOrEmpty(imageUrl))
+        {
+            return "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop";
+        }
+
+        if (Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
+        {
+            return imageUrl;
+        }
+
+        return "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop";
+    }
+
+    private string GetConditionBadgeClass(string condition)
+    {
+        if (Enum.TryParse<ItemCondition>(condition, out var conditionEnum))
+        {
+            return conditionEnum switch
+            {
+                ItemCondition.BrandNew => "badge-primary",
+                ItemCondition.LikeNew => "badge-secondary",
+                ItemCondition.LightlyUsed => "badge-outline",
+                ItemCondition.WellUsed => "badge-secondary",
+                ItemCondition.HeavilyUsed => "badge-destructive",
+                _ => "badge-secondary"
+            };
+        }
+        return "badge-secondary";
+    }
+
+    private void ShowMessage(string message, string type)
+    {
+        Message = message;
+        MessageType = type;
+        StateHasChanged();
+
+        Task.Delay(5000).ContinueWith(_ => ClearMessage());
+    }
+
+    private void ClearMessage()
+    {
+        Message = "";
+        MessageType = "";
+        InvokeAsync(StateHasChanged);
+    }
+}

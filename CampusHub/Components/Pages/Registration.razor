@@ -1,74 +1,185 @@
-﻿@page "/Registration"
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IDropdownService DropdownService
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@using CampusHub.Application.DTO
+@using CampusHub.Application.DTOs
+@using CampusHub.Application.Interfaces
 
-<div class="container">
-    <img alt="University of Caloocan City official logo"
-         class="logo"
-         height="80"
-         src="images/UCC_logo.png"
-         width="64" />
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <img alt="University of Caloocan City official logo"
+                 class="university-logo"
+                 src="images/UCC_logo.png" />
+            <h1>Student Registration</h1>
+            <p class="login-subtitle">Campus Hub Portal</p>
+        </div>
 
-    <h1 class="title">Campus Hub</h1>
-    <h2 class="subtitle">University of Caloocan City</h2>
+        <div class="login-content">
+            <div class="login-intro">
+                <p class="portal-text">Enter your student information to create your account and access the university portal</p>
+            </div>
 
-    <EditForm class="form" Model="student" OnValidSubmit="@HandleValidSubmit" FormName="FormModel">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+            <EditForm Model="student" OnValidSubmit="@HandleValidSubmit" FormName="StudentRegistrationForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-        <p class="form-title">Student Verification</p>
-        <p class="form-subtitle">Enter your student information to Sign In</p>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="badge badge-destructive" style="width: 100%; margin-bottom: var(--spacing-4); padding: var(--spacing-3);">
+                        @errorMessage
+                    </div>
+                }
 
-        <label class="label" for="fullName">Full Name:</label>
-        <InputText class="input" id="fullName" @bind-Value="student.FullName" />
-        <ValidationMessage For="@(() => student.FullName)" />
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="badge badge-primary" style="width: 100%; margin-bottom: var(--spacing-4); padding: var(--spacing-3);">
+                        @successMessage
+                    </div>
+                }
 
-        <label class="label" for="userName">Username:</label>
-        <InputText class="input" id="userName" @bind-Value="student.Username" />
-        <ValidationMessage For="@(() => student.Username)" />
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <InputText id="fullName" @bind-Value="student.FullName" placeholder="Enter your complete name" />
+                    <ValidationMessage For="@(() => student.FullName)" />
+                </div>
 
-        <label class="label" for="studentNumber">Student Number:</label>
-        <InputText class="input" id="studentNumber" @bind-Value="student.StudentNumber" />
-        <ValidationMessage For="@(() => student.StudentNumber)" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userName">Username</label>
+                        <InputText id="userName" @bind-Value="student.Username" placeholder="Choose a username" />
+                        <ValidationMessage For="@(() => student.Username)" />
+                    </div>
 
-        <label class="label" for="emailAddress">Email Address:</label>
-        <InputText class="input" id="emailAddress" @bind-Value="student.Email" />
-        <ValidationMessage For="@(() => student.Email)" />
+                    <div class="form-group">
+                        <label for="studentNumber">Student Number</label>
+                        <InputText id="studentNumber" @bind-Value="student.StudentNumber" placeholder="Your student ID" />
+                        <ValidationMessage For="@(() => student.StudentNumber)" />
+                    </div>
+                </div>
 
-        <label class="label" for="contactNumber">Contact Number:</label>
-        <InputText class="input" id="studentNumber" @bind-Value="student.ContactNumber" />
-        <ValidationMessage For="@(() => student.ContactNumber)" />
+                <div class="form-group">
+                    <label for="emailAddress">Email Address</label>
+                    <InputText id="emailAddress" type="email" @bind-Value="student.Email" placeholder="your.email@student.ucc.edu.ph" />
+                    <ValidationMessage For="@(() => student.Email)" />
+                </div>
 
-        <label class="label" for="yearLevel">Year:</label>
-        <InputSelect class="input" id="yearLevel" @bind-Value="student.YearLevelId">
-            <option value="">Select your year</option>
-            @foreach (var year in YearLevel)
-            {
-                <option value="@year.YearID">@year.YearName</option>
-            }
-        </InputSelect>
-        <ValidationMessage For="@(() => student.YearLevelId)" />
+                <div class="form-group">
+                    <label for="contactNumber">Contact Number</label>
+                    <InputText id="contactNumber" @bind-Value="student.ContactNumber" placeholder="+63 XXX XXX XXXX" />
+                    <ValidationMessage For="@(() => student.ContactNumber)" />
+                </div>
 
-        <label class="label" for="program">Program:</label>
-        <InputSelect class="input" id="program" @bind-Value="student.ProgramID">
-            <option value="">Select your program</option>
-            @foreach (var program in ProgramCourse)
-            {
-                <option value="@program.ProgramID">@program.ProgramName</option>
-            }
-        </InputSelect>
-        <ValidationMessage For="@(() => student.ProgramID)" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="yearLevel">Year Level</label>
+                        <InputSelect id="yearLevel" @bind-Value="student.YearLevelId">
+                            <option value="">Select your year</option>
+                            @foreach (var year in yearLevels)
+                            {
+                                <option value="@year.Id">@year.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => student.YearLevelId)" />
+                    </div>
 
-        <label class="label" for="password">Password:</label>
-        <InputText class="input" id="password" type="password" @bind-Value="student.Password" />
-        <ValidationMessage For="@(() => student.Password)" />
+                    <div class="form-group">
+                        <label for="program">Program</label>
+                        <InputSelect id="program" @bind-Value="student.ProgramID">
+                            <option value="">Select your program</option>
+                            @foreach (var program in programs)
+                            {
+                                <option value="@program.Id">@program.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => student.ProgramID)" />
+                    </div>
+                </div>
 
-        <button class="btn-register" type="submit">Register</button>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <InputText id="password" type="password" @bind-Value="student.Password" placeholder="Create a secure password" />
+                    <ValidationMessage For="@(() => student.Password)" />
+                </div>
 
-        <p class="form-footer">
-            Already have an account? <a class="link" href="/">Login</a>
-        </p>
-    </EditForm>
+                <button class="btn btn-primary btn-large" type="submit" disabled="@isSubmitting" style="width: 100%; margin-top: var(--spacing-4);">
+                    @if (isSubmitting)
+                    {
+                        <span>Creating Account...</span>
+                    }
+                    else
+                    {
+                        <span>Create Account</span>
+                    }
+                </button>
+
+                <p class="login-intro" style="margin-top: var(--spacing-4); text-align: center;">
+                    Already have an account?
+                    <a href="/login" style="color: var(--primary-green); font-weight: 500; text-decoration: none;">
+                        Sign In
+                    </a>
+                </p>
+            </EditForm>
+        </div>
+    </div>
 </div>
 
+@code {
+    private CreateUserDto student = new();
+    private List<YearLevelDto> yearLevels = new();
+    private List<ProgramDto> programs = new();
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+    private string successMessage = "";
 
-@code {   
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            yearLevels = await DropdownService.GetYearLevelsAsync();
+            programs = await DropdownService.GetProgramsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load form data. Please refresh the page.";
+            // Use server-side console logging instead of browser console
+            Console.WriteLine($"Error loading dropdown data: {ex.Message}");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = "";
+            successMessage = "";
+
+            var userId = await UserService.CreateUserAsync(student);
+
+            if (userId > 0)
+            {
+                successMessage = "Registration successful! Redirecting to login...";
+
+                // Wait a moment to show success message, then redirect
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = "Registration failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Registration failed: " + ex.Message;
+            Console.WriteLine($"Registration error: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
 }
