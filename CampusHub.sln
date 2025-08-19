@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36327.8 d17.14
+VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusHub", "CampusHub\CampusHub.csproj", "{2FA0C2AE-34DD-45DE-98C2-99943EE656A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusHub.Presentation", "CampusHub\CampusHub.Presentation.csproj", "{2FA0C2AE-34DD-45DE-98C2-99943EE656A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusHub.Domain", "CampusHub.Domain\CampusHub.Domain.csproj", "{54D1DC93-E9C6-4090-A362-623BE480B293}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusHub.Application", "CampusHub.Application\CampusHub.Application.csproj", "{03951245-1994-48EF-951B-CA440AC1482A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusHub.Infrastructure", "CampusHub.Infrastructure\CampusHub.Infrastructure.csproj", "{6E90BAE6-12BC-4604-9229-871D6F34220C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{2FA0C2AE-34DD-45DE-98C2-99943EE656A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FA0C2AE-34DD-45DE-98C2-99943EE656A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FA0C2AE-34DD-45DE-98C2-99943EE656A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54D1DC93-E9C6-4090-A362-623BE480B293}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54D1DC93-E9C6-4090-A362-623BE480B293}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54D1DC93-E9C6-4090-A362-623BE480B293}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54D1DC93-E9C6-4090-A362-623BE480B293}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03951245-1994-48EF-951B-CA440AC1482A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03951245-1994-48EF-951B-CA440AC1482A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03951245-1994-48EF-951B-CA440AC1482A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03951245-1994-48EF-951B-CA440AC1482A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E90BAE6-12BC-4604-9229-871D6F34220C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E90BAE6-12BC-4604-9229-871D6F34220C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E90BAE6-12BC-4604-9229-871D6F34220C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E90BAE6-12BC-4604-9229-871D6F34220C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

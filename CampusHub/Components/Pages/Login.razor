@@ -1,73 +1,166 @@
-﻿@page "/"
-@using UCC.Components.Layout
-@layout EmptyLayout
-
-@rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
-@using UCC.Components.Models
-@using Microsoft.EntityFrameworkCore
+﻿@page "/login"
+@using CampusHub.Application.DTO
+@using CampusHub.Application.Interfaces
+@inject IUserService UserService
 @inject NavigationManager NavigationManager
-@inject UCCDatabaseContext _context
+@inject IJSRuntime JSRuntime
+@using System.ComponentModel.DataAnnotations
+@rendermode InteractiveServer
 
-<div class="container">
-    <img alt="University of Caloocan City official logo with green ribbon and shield containing sun and torch"
-         class="logo"
-         height="80"
-         src="images/UCC_logo.png"
-         width="64" />
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <img alt="University of Caloocan City official logo with green ribbon and shield containing sun and torch"
+                 class="university-logo"
+                 height="80"
+                 src="images/UCC_logo.png"
+                 width="80" />
+            <h1>Campus Hub</h1>
+            <p class="login-subtitle">University of Caloocan City</p>
+        </div>
 
-    <h1 class="title">Campus Hub</h1>
-    <h2 class="subtitle">University of Caloocan City</h2>
+        <div class="login-content">
+            <div class="login-intro">
+                <p class="portal-text">Student Portal Access</p>
+            </div>
 
-    <EditForm class="form" Model="loginModel" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+            <EditForm class="verification-form" Model="loginDto" OnValidSubmit="HandleValidSubmit" FormName="verification-form">
+                <DataAnnotationsValidator />
 
-        <p class="form-title">Student Verification</p>
-        <p class="form-subtitle">Enter your student number to access the platform</p>
+                <div class="verification-header" style="margin-bottom: var(--spacing-6); text-align: left;">
+                    <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-2);">Student Verification</h2>
+                    <p class="verification-description">Enter your username and password to access the platform</p>
+                </div>
 
-        <label class="label" for="studentNumber">Student Number:</label>
-        <InputText class="input" id="studentNumber" @bind-Value="loginModel.StudentNumber" />
-        <ValidationMessage For="@(() => loginModel.StudentNumber)" />
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <InputText id="username" @bind-Value="loginDto.Username" />
+                    <ValidationMessage For="@(() => loginDto.Username)" />
+                </div>
 
-        <label class="label" for="password">Password:</label>
-        <InputText class="input" id="password" type="password" @bind-Value="loginModel.Password" />
-        <ValidationMessage For="@(() => loginModel.Password)" />
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <InputText id="password" type="password" @bind-Value="loginDto.Password" />
+                    <ValidationMessage For="@(() => loginDto.Password)" />
+                </div>
 
-        <button class="btn-login" type="submit">Login</button>
+                <button class="btn btn-primary btn-large" type="submit" disabled="@isLoading" style="width: 100%;">
+                    @if (isLoading)
+                    {
+                        <span>Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
 
-        <p class="form-footer">
-            Don’t have an account?
-            <NavLink class="link" href="/UserRegistration">Sign Up</NavLink>
-        </p>
+                <p style="text-align: center; margin-top: var(--spacing-4); color: var(--muted-foreground); font-size: var(--font-size-sm);">
+                    Don't have an account?
+                    <NavLink href="/" style="color: var(--primary-green); text-decoration: none; font-weight: 500;">Sign Up</NavLink>
+                </p>
 
-        @if (!string.IsNullOrEmpty(loginError))
-        {
-            <p class="error-message" style="color:red;">@loginError</p>
-        }
-    </EditForm>
+                @if (!string.IsNullOrEmpty(loginError))
+                {
+                    <div class="badge badge-destructive" style="width: 100%; justify-content: center; margin-top: var(--spacing-4);">
+                        @loginError
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="badge badge-primary" style="width: 100%; justify-content: center; margin-top: var(--spacing-4);">
+                        @successMessage
+                    </div>
+                }
+
+                <ValidationSummary />
+            </EditForm>
+        </div>
+    </div>
 </div>
 
 @code {
-    private LoginViewModel loginModel = new();
+    private LoginDto loginDto = new LoginDto();
     private string loginError = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isLoading = false;
 
     private async Task HandleValidSubmit()
     {
         loginError = string.Empty;
+        successMessage = string.Empty;
+        isLoading = true;
 
-        var student = await _context.StudentRegistration
-            .FirstOrDefaultAsync(s =>
-                s.StudentNumber.Trim() == loginModel.StudentNumber.Trim()
-                && s.Password == loginModel.Password);
-
-        if (student != null)
+        try
         {
-            NavigationManager.NavigateTo("/Home");
+            var result = await UserService.LoginAsync(loginDto);
+            if (result.IsSuccess)
+            {
+                successMessage = result.Message;
+                StateHasChanged();
+
+                // Store authentication data from LoginResponseDto
+                await StoreUserSession(result);
+
+                // Small delay to show success message
+                await Task.Delay(500);
+                NavigationManager.NavigateTo("/main-marketplace");
+            }
+            else
+            {
+                loginError = result.Message ?? "Login failed. Please check your credentials.";
+            }
         }
-        else
+        catch (UnauthorizedAccessException ex)
         {
-            loginError = "Invalid student number or password.";
+            loginError = "Invalid credentials. Please check your username and password.";
+            Console.WriteLine($"Unauthorized: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            loginError = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            loginError = "Network error occurred. Please check your connection and try again.";
+            Console.WriteLine($"Network error during login: {ex.Message}");
+        }
+        catch (TaskCanceledException ex)
+        {
+            loginError = "The request timed out. Please try again.";
+            Console.WriteLine($"Timeout during login: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            loginError = "An unexpected error occurred. Please try again.";
+            Console.WriteLine($"Login error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StoreUserSession(LoginResponseDto loginResponse)
+    {
+        try
+        {
+            // Store user data in sessionStorage
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userId", loginResponse.UserId.ToString());
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "username", loginResponse.Username);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "fullName", loginResponse.FullName);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "role", loginResponse.Role);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "email", loginResponse.Email ?? "");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "isAuthenticated", "true");
+
+            Console.WriteLine($"Successfully stored user session for UserId: {loginResponse.UserId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error storing user session: {ex.Message}");
+            loginError = "Error saving login session. Please try again.";
         }
     }
 }

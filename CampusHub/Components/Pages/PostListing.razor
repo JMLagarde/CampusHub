@@ -1,0 +1,356 @@
+﻿@page "/post-listing"
+@layout Layout.MainLayout
+@using CampusHub.Application.DTO
+@using CampusHub.Application.Interfaces
+@using CampusHub.Domain.Entities
+@inject IMarketplaceService MarketplaceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="content-container">
+    <div class="content-header">
+        <div class="content-title">
+            <h2>Post New Item</h2>
+            <p class="content-subtitle">Share your item with the UCC Campus Hub community</p>
+        </div>
+        <button class="btn btn-outline" @onclick="NavigateBack">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12,19 5,12 12,5" />
+            </svg>
+            Back to Marketplace
+        </button>
+    </div>
+
+    <div class="profile-container">
+        <div class="card">
+            <div class="card-content">
+                <EditForm Model="NewItem" OnValidSubmit="PostNewItem">
+                    <DataAnnotationsValidator />
+
+                    <!-- Image Preview Section -->
+                    <div class="form-group">
+                        <label>Item Preview</label>
+                        <div class="image-preview-container">
+                            <div class="image-preview">
+                                <img id="preview-image"
+                                     src="@GetPreviewImageUrl()"
+                                     alt="Item preview"
+                                     onerror="this.src='https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop'">
+                                <div class="image-overlay">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <polyline points="21,15 16,10 5,21" />
+                                    </svg>
+                                    <span>Preview</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Basic Information -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Basic Information</h3>
+
+                        <div class="form-group">
+                            <label for="title">Item Title</label>
+                            <InputText id="title"
+                                       @bind-Value="NewItem.Title"
+                                       placeholder="e.g., MacBook Pro 2021, iPhone 13, Calculus Textbook"
+                                       @oninput="UpdatePreview" />
+                            <ValidationMessage For="@(() => NewItem.Title)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <InputTextArea id="description"
+                                           @bind-Value="NewItem.Description"
+                                           placeholder="Describe your item in detail. Include condition, specifications, reason for selling, etc."
+                                           rows="4" />
+                            <ValidationMessage For="@(() => NewItem.Description)" />
+                        </div>
+                    </div>
+
+                    <!-- Pricing & Condition -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Pricing & Condition</h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price">Price (₱)</label>
+                                <InputNumber id="price"
+                                             @bind-Value="NewItem.Price"
+                                             placeholder="0" />
+                                <div class="form-help">
+                                    Set a competitive price based on item condition and market value
+                                </div>
+                                <ValidationMessage For="@(() => NewItem.Price)" />
+                            </div>
+                            <div class="form-group">
+                                <label for="condition">Condition</label>
+                                <InputSelect id="condition" @bind-Value="NewItem.Condition">
+                                    <option value="">Select condition</option>
+                                    <option value="@ItemCondition.BrandNew">Brand New</option>
+                                    <option value="@ItemCondition.LikeNew">Like New</option>
+                                    <option value="@ItemCondition.LightlyUsed">Lightly Used</option>
+                                    <option value="@ItemCondition.WellUsed">Well Used</option>
+                                    <option value="@ItemCondition.HeavilyUsed">Heavily Used</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => NewItem.Condition)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location & Image -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Location & Images</h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="location">Campus Location</label>
+                                <InputSelect id="location" @bind-Value="NewItem.Location">
+                                    <option value="">Select campus location</option>
+                                    <option value="@CampusLocation.MainCampus">Main Campus</option>
+                                    <option value="@CampusLocation.Congressional">Congressional Extension Campus</option>
+                                    <option value="@CampusLocation.BagongSilang">Bagong Silang Extension Campus</option>
+                                    <option value="@CampusLocation.Camarin">Camarin Extension Campus</option>
+                                </InputSelect>
+                                <div class="form-help">
+                                    Choose where buyers can meet you for pickup
+                                </div>
+                                <ValidationMessage For="@(() => NewItem.Location)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="image">Image URL</label>
+                            <InputText id="image"
+                                       @bind-Value="NewItem.ImageUrl"
+                                       @oninput="UpdatePreview"
+                                       placeholder="https://example.com/image.jpg" />
+                            <div class="form-help">
+                                Add a clear photo of your item. Good photos help sell faster!
+                            </div>
+                            <ValidationMessage For="@(() => NewItem.ImageUrl)" />
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" @onclick="NavigateBack" disabled="@IsPosting">
+                            Cancel
+                        </button>
+                        <div class="form-actions-primary">
+                            <button type="button" class="btn btn-outline" disabled="@IsPosting">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                    <polyline points="17,21 17,13 7,13 7,21" />
+                                    <polyline points="7,3 7,8 15,8" />
+                                </svg>
+                                Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-large" disabled="@IsPosting">
+                                @if (IsPosting)
+                                {
+                                    <div class="loading-spinner"></div>
+                                    <span>Publishing...</span>
+                                }
+                                else
+                                {
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12,6 12,12 16,14" />
+                                    </svg>
+                                    <span>Publish Item</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="tips-section">
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="card-title">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        Tips for a Great Listing
+                    </h3>
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21,15 16,10 5,21" />
+                                </svg>
+                            </div>
+                            <div class="tip-content">
+                                <strong>Use clear, high-quality photos</strong>
+                                <p>Items with good photos sell 3x faster than those without</p>
+                            </div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14,2 14,8 20,8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10,9 9,9 8,9" />
+                                </svg>
+                            </div>
+                            <div class="tip-content">
+                                <strong>Write detailed descriptions</strong>
+                                <p>Include specifications, condition details, and reason for selling</p>
+                            </div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <line x1="12" y1="1" x2="12" y2="23" />
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                            </div>
+                            <div class="tip-content">
+                                <strong>Price competitively</strong>
+                                <p>Research similar items to set a fair and attractive price</p>
+                            </div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                            </div>
+                            <div class="tip-content">
+                                <strong>Choose convenient locations</strong>
+                                <p>Select campus locations that are easy for buyers to reach</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="toast toast-@MessageType">
+        <div class="toast-content">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                @if (MessageType == "success")
+                {
+                    <path d="M9 12l2 2 4-4" />
+                    <circle cx="12" cy="12" r="10" />
+                }
+                else
+                {
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                }
+            </svg>
+            <span>@Message</span>
+        </div>
+        <button class="btn-icon" @onclick="ClearMessage">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+    </div>
+}
+
+@code {
+    // Properties
+    private CreateMarketplaceItemDto NewItem { get; set; } = new();
+    private bool IsPosting { get; set; } = false;
+    private string Message { get; set; } = string.Empty;
+    private string MessageType { get; set; } = "success"; 
+    private int? CurrentUserId { get; set; } = 1; 
+
+    protected override void OnInitialized()
+    {
+        NewItem = new CreateMarketplaceItemDto
+        {
+            SellerId = CurrentUserId ?? 1,
+            SellerName = "Current User" 
+        };
+    }
+
+    private async Task PostNewItem()
+    {
+        IsPosting = true;
+        try
+        {
+            NewItem.SellerId = CurrentUserId ?? 1;
+            NewItem.SellerName = "Current User"; 
+
+            var createdItem = await MarketplaceService.CreateItemAsync(NewItem);
+
+            ShowMessage("Item posted successfully! Redirecting to marketplace...", "success");
+
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/main-marketplace");
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Failed to post item: {ex.Message}", "error");
+        }
+        finally
+        {
+            IsPosting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/main-marketplace");
+    }
+
+    private string GetPreviewImageUrl()
+    {
+        return !string.IsNullOrEmpty(NewItem.ImageUrl) && Uri.IsWellFormedUriString(NewItem.ImageUrl, UriKind.Absolute)
+            ? NewItem.ImageUrl
+            : "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop";
+    }
+
+    private async Task UpdatePreview()
+    {
+        await Task.Delay(100);
+        StateHasChanged();
+    }
+
+    private void ShowMessage(string message, string type)
+    {
+        Message = message;
+        MessageType = type;
+        StateHasChanged();
+
+        _ = Task.Delay(5000).ContinueWith(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                ClearMessage();
+            });
+        });
+    }
+
+    private void ClearMessage()
+    {
+        Message = string.Empty;
+        StateHasChanged();
+    }
+}
