@@ -164,23 +164,16 @@
     private async Task Logout()
     {
         CloseUserMenu();
-        // Implement logout through your authentication service
         Navigation.NavigateTo("/login");
     }
 
     private async Task OnSearchInput(ChangeEventArgs e)
     {
         SearchQuery = e.Value?.ToString() ?? string.Empty;
-        // Implement search functionality through your services
     }
 
     private async Task LoadUserData()
     {
-        // Load user data from your user service
-        // var user = await UserService.GetCurrentUserAsync();
-        // CurrentUserFullName = user.FullName;
-        // CurrentUserStudentNumber = user.StudentNumber;
-        // etc.
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -31,9 +31,11 @@ namespace CampusHub.Presentation.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An internal error occurred" });
+                // Log the full exception details
+                Console.WriteLine($"Login error: {ex}");
+                return StatusCode(500, new { message = "An internal error occurred", details = ex.Message });
             }
         }
 

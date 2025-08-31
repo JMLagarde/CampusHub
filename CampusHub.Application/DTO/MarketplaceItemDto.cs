@@ -11,7 +11,6 @@ namespace CampusHub.Application.DTO
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public ItemCondition Condition { get; set; }
-        public DateTime Created { get; set; }
         public string Location { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
         public string SellerName { get; set; } = string.Empty;
