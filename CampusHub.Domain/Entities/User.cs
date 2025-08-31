@@ -25,7 +25,10 @@ namespace CampusHub.Domain.Entities
         public DateTime? DateRegistered { get; set; } = DateTime.UtcNow; 
 
         [Required]
-        public string Password { get; set; } = string.Empty; 
+        public string Password { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+
+        public string? ProfilePictureUrl { get; set; }
 
         // Foreign Keys
         public int? YearLevelId { get; set; }

@@ -82,22 +82,41 @@ namespace CampusHub.Application.Services
             return Task.CompletedTask;
         }
 
-        public async Task<CurrentUserDto?> GetUserByIdAsync(int id)
+        // Updated to return CurrentUserDto (consolidated from ProfileService)
+        public async Task<CurrentUserDto?> GetUserByIdAsync(int userId)
         {
-            var user = await _userRepository.GetUserWithDetailsAsync(id);
-            return user is null ? null : MapUserToCurrentUserDto(user);
+            var user = await _userRepository.GetUserWithDetailsAsync(userId);
+            if (user == null) return null;
+
+            return new CurrentUserDto
+            {
+                Id = user.UserID,
+                Username = user.Username,
+                FullName = user.FullName,
+                StudentNumber = user.StudentNumber ?? "",
+                Email = user.Email ?? "",
+                ContactNumber = user.ContactNumber ?? "",
+                ProgramID = user.ProgramID,
+                Program = user.Program?.Name ?? "Unknown",
+                YearLevelId = user.YearLevelId,
+                YearLevel = user.YearLevel?.Name ?? "Unknown",
+                Role = user.Role ?? "Student",
+                CreatedAt = user.DateRegistered ?? DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ProfilePictureUrl = user.ProfilePictureUrl
+            };
         }
 
         public async Task<CreateUserDto?> GetUserByUsernameAsync(string username)
         {
             var user = await _userRepository.GetByUsernameAsync(username);
-            return user is null ? null : MapUserToDto(user);
+            return user is null ? null : MapUserToCreateDto(user);
         }
 
         public async Task<List<CreateUserDto>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllUsersWithDetailsAsync();
-            return users.Select(MapUserToDto).ToList();
+            return users.Select(MapUserToCreateDto).ToList();
         }
 
         public async Task<bool> UsernameExistsAsync(string username)
@@ -105,10 +124,8 @@ namespace CampusHub.Application.Services
             return await _userRepository.UsernameExistsAsync(username);
         }
 
-        public async Task<CurrentUserDto?> GetCurrentUserAsync()
-        {
-            throw new NotImplementedException("Use GetCurrentUserAsync(int userId) instead, after getting userId from sessionStorage in your component");
-        }
+
+
         public async Task<CurrentUserDto?> GetCurrentUserAsync(int userId)
         {
             try
@@ -124,12 +141,9 @@ namespace CampusHub.Application.Services
                 return null;
             }
         }
-        public Task<CreateUserDto?> GetCurrentUserAsync(string sessionToken)
-        {
-            throw new NotImplementedException();
-        }
 
-        private CreateUserDto MapUserToDto(User user)
+        // Helper mapping methods
+        private CreateUserDto MapUserToCreateDto(User user)
         {
             return new CreateUserDto
             {
@@ -138,7 +152,7 @@ namespace CampusHub.Application.Services
                 Email = user.Email ?? "",
                 StudentNumber = user.StudentNumber ?? "",
                 ContactNumber = user.ContactNumber ?? "",
-                Password = "",
+                Password = "", // Never return password
                 YearLevelId = user.YearLevelId ?? 0,
                 ProgramID = user.ProgramID ?? 0
             };
@@ -156,13 +170,13 @@ namespace CampusHub.Application.Services
                 StudentNumber = user.StudentNumber,
                 ContactNumber = user.ContactNumber,
                 YearLevelId = user.YearLevelId,
-                ProgramID = user.ProgramID
+                ProgramID = user.ProgramID,
+                Program = user.Program?.Name ?? "Unknown",
+                YearLevel = user.YearLevel?.Name ?? "Unknown",
+                CreatedAt = user.DateRegistered ?? DateTime.UtcNow,
+                UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow,
+                ProfilePictureUrl = user.ProfilePictureUrl
             };
-        }
-
-        Task<CreateUserDto?> IUserService.GetUserByIdAsync(int id)
-        {
-            throw new NotImplementedException();
         }
     }
 }

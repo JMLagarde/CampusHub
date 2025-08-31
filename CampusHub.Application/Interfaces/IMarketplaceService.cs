@@ -1,10 +1,6 @@
 ﻿using CampusHub.Application.DTO;
 using CampusHub.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace CampusHub.Application.Interfaces
 {
@@ -18,6 +14,9 @@ namespace CampusHub.Application.Interfaces
         Task<bool> ToggleLikeAsync(int itemId, int userId);
         Task<IEnumerable<MarketplaceItemDto>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null);
         Task<IEnumerable<MarketplaceItemDto>> GetItemsBySellerAsync(int sellerId, int? currentUserId = null);
-
+        Task<List<MarketplaceItemDto>> GetUserItemsAsync(int userId);
+        Task ToggleLikeAsync(ToggleLikeDto toggleDto);
+        Task<List<MarketplaceItemDto>> GetUserListingsAsync(int userId);
+        Task UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status);
     }
 }

@@ -15,8 +15,15 @@
                 </div>
             </div>
 
-            <!-- Navigation Tabs -->
             <div class="nav-tabs">
+                <NavLink class="nav-tab" href="/main-marketplace" Match="NavLinkMatch.All">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                    Marketplace
+                </NavLink>
                 <NavLink class="nav-tab" href="/events" Match="NavLinkMatch.All">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -26,15 +33,7 @@
                     </svg>
                     Events
                 </NavLink>
-                <NavLink class="nav-tab" href="/marketplace">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                        <line x1="3" y1="6" x2="21" y2="6" />
-                        <path d="M16 10a4 4 0 0 1-8 0" />
-                    </svg>
-                    Marketplace
-                </NavLink>
-                <NavLink class="nav-tab" href="/profile">
+                <NavLink class="nav-tab" href="/profile" Match="NavLinkMatch.All">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />

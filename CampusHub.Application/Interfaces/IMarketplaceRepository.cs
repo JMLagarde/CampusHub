@@ -1,4 +1,5 @@
-﻿using CampusHub.Domain.Entities;
+﻿using CampusHub.Application.DTO;
+using CampusHub.Domain.Entities;
 
 namespace CampusHub.Application.Interfaces
 {

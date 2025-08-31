@@ -1,10 +1,10 @@
-﻿@page "/login"
+﻿@page "/"
 @using CampusHub.Application.DTO
-@using CampusHub.Application.Interfaces
-@inject IUserService UserService
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Json
 @rendermode InteractiveServer
 
 <div class="login-container">
@@ -27,8 +27,8 @@
             <EditForm class="verification-form" Model="loginDto" OnValidSubmit="HandleValidSubmit" FormName="verification-form">
                 <DataAnnotationsValidator />
 
-                <div class="verification-header" style="margin-bottom: var(--spacing-6); text-align: left;">
-                    <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-2);">Student Verification</h2>
+                <div class="verification-header">
+                    <h2 class="verification-title">Student Verification</h2>
                     <p class="verification-description">Enter your username and password to access the platform</p>
                 </div>
 
@@ -44,7 +44,7 @@
                     <ValidationMessage For="@(() => loginDto.Password)" />
                 </div>
 
-                <button class="btn btn-primary btn-large" type="submit" disabled="@isLoading" style="width: 100%;">
+                <button class="btn btn-primary btn-large" type="submit" disabled="@isLoading">
                     @if (isLoading)
                     {
                         <span>Logging in...</span>
@@ -55,22 +55,18 @@
                     }
                 </button>
 
-                <p style="text-align: center; margin-top: var(--spacing-4); color: var(--muted-foreground); font-size: var(--font-size-sm);">
+                <p class="signup-text">
                     Don't have an account?
-                    <NavLink href="/" style="color: var(--primary-green); text-decoration: none; font-weight: 500;">Sign Up</NavLink>
+                    <NavLink href="/register" style="color: var(--primary-green); text-decoration: none; font-weight: 500;">Sign Up</NavLink>
                 </p>
 
                 @if (!string.IsNullOrEmpty(loginError))
                 {
-                    <div class="badge badge-destructive" style="width: 100%; justify-content: center; margin-top: var(--spacing-4);">
-                        @loginError
-                    </div>
+                    <div class="badge badge-destructive">@loginError</div>
                 }
                 @if (!string.IsNullOrEmpty(successMessage))
                 {
-                    <div class="badge badge-primary" style="width: 100%; justify-content: center; margin-top: var(--spacing-4);">
-                        @successMessage
-                    </div>
+                    <div class="badge badge-primary">@successMessage</div>
                 }
 
                 <ValidationSummary />
@@ -78,6 +74,7 @@
         </div>
     </div>
 </div>
+
 
 @code {
     private LoginDto loginDto = new LoginDto();
@@ -93,32 +90,53 @@
 
         try
         {
-            var result = await UserService.LoginAsync(loginDto);
-            if (result.IsSuccess)
+            var response = await HttpClient.PostAsJsonAsync("api/auth/login", loginDto);
+
+            if (response.IsSuccessStatusCode)
             {
-                successMessage = result.Message;
-                StateHasChanged();
+                var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+                if (result != null)
+                {
+                    successMessage = "Login successful!";
+                    StateHasChanged();
 
-                // Store authentication data from LoginResponseDto
-                await StoreUserSession(result);
+                    await StoreUserSession(result);
 
-                // Small delay to show success message
-                await Task.Delay(500);
-                NavigationManager.NavigateTo("/main-marketplace");
+                    await Task.Delay(500);
+                    NavigationManager.NavigateTo("/main-marketplace");
+                }
+                else
+                {
+                    loginError = "Invalid response from server.";
+                }
             }
             else
             {
-                loginError = result.Message ?? "Login failed. Please check your credentials.";
+                // Parse error response
+                try
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    var errorResponse = JsonSerializer.Deserialize<JsonElement>(errorContent);
+
+                    if (errorResponse.TryGetProperty("message", out var messageProperty))
+                    {
+                        loginError = messageProperty.GetString() ?? "Login failed. Please check your credentials.";
+                    }
+                    else
+                    {
+                        loginError = "Login failed. Please check your credentials.";
+                    }
+                }
+                catch
+                {
+                    loginError = response.StatusCode switch
+                    {
+                        System.Net.HttpStatusCode.Unauthorized => "Invalid credentials. Please check your username and password.",
+                        System.Net.HttpStatusCode.BadRequest => "Invalid login data. Please check your input.",
+                        _ => "Login failed. Please try again."
+                    };
+                }
             }
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            loginError = "Invalid credentials. Please check your username and password.";
-            Console.WriteLine($"Unauthorized: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            loginError = ex.Message;
         }
         catch (HttpRequestException ex)
         {
