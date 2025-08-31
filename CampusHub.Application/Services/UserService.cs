@@ -163,20 +163,21 @@ namespace CampusHub.Application.Services
             return new CurrentUserDto
             {
                 Id = user.UserID,
-                Username = user.Username,
-                FullName = user.FullName,
-                Email = user.Email,
+                Username = user.Username ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
                 Role = user.Role ?? "Student",
-                StudentNumber = user.StudentNumber,
-                ContactNumber = user.ContactNumber,
+                StudentNumber = user.StudentNumber ?? string.Empty,
+                ContactNumber = user.ContactNumber ?? string.Empty,
                 YearLevelId = user.YearLevelId,
                 ProgramID = user.ProgramID,
                 Program = user.Program?.Name ?? "Unknown",
                 YearLevel = user.YearLevel?.Name ?? "Unknown",
                 CreatedAt = user.DateRegistered ?? DateTime.UtcNow,
                 UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow,
-                ProfilePictureUrl = user.ProfilePictureUrl
+                ProfilePictureUrl = user.ProfilePictureUrl ?? string.Empty
             };
         }
+
     }
 }

@@ -861,7 +861,7 @@ textarea {
     margin: 0 auto;
 }
 
-/* Tab Content */
+
 .tab-content {
     display: none;
 }
@@ -869,7 +869,7 @@ textarea {
     .tab-content.active {
         display: block;
     }
-
+    
 /* Content Header */
 .content-header {
     display: flex;

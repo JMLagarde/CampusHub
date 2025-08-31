@@ -1,4 +1,6 @@
 ﻿@page "/profile"
+@layout Layout.MainLayout
+@rendermode InteractiveServer
 @using CampusHub.Application.DTO
 @using CampusHub.Application.Interfaces
 @using CampusHub.Domain.Entities
@@ -6,7 +8,7 @@
 @inject IUserService UserService
 @inject IMarketplaceService MarketplaceService
 
-<div id="profile-content" class="tab-content">
+<div id="profile-content" class="tab-content active" >
     <div class="profile-container">
         <div class="profile-header">
             <div class="profile-title">
@@ -22,16 +24,22 @@
             </button>
         </div>
 
-        <button class="profile-tab @(activeTab == "info" ? "active" : "")"
-                @onclick="@(() => ShowProfileTab("info"))">
-            Profile Info
-        </button>
+        <!-- Fixed: Added proper tab navigation container -->
+        <div class="profile-tabs">
+            <button class="profile-tab @(activeTab == "info" ? "active" : "")"
+                    @onclick="@(() => ShowProfileTab("info"))">
+                Profile Info
+            </button>
+            <button class="profile-tab @(activeTab == "listings" ? "active" : "")"
+                    @onclick="@(() => ShowProfileTab("listings"))">
+                My Listings
+            </button>
+        </div>
 
         @if (currentUser != null)
         {
             <!-- Profile Info -->
-            <div id="profile-info" class="profile-tab-content @(activeTab == "info" ? "active" : "")"
-                 style="display: @(activeTab == "info" ? "block" : "none")">
+            <div id="profile-info" style="display: @(activeTab == "info" ? "block" : "none")">
                 <div class="profile-card">
                     <div class="profile-card-header">
                         <h3>Profile Information</h3>
@@ -78,7 +86,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label>Phone Number</label>
-                                        <input type="text" value="@currentUser.ContactNumber" readonly>
+                                        <input type="text" value="@(currentUser.ContactNumber ?? "")" readonly>
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -107,7 +115,7 @@
             </div>
 
             <!-- My Listings -->
-            <div id="profile-listings" class="profile-tab-content @(activeTab == "listings" ? "active" : "")" style="display: @(activeTab == "listings" ? "block" : "none")">
+            <div id="profile-listings" style="display: @(activeTab == "listings" ? "block" : "none")">
                 <div class="listings-stats">
                     <div class="stat-card">
                         <div class="stat-content">
@@ -174,7 +182,7 @@
                                             </div>
                                         </div>
                                         <div class="item-footer">
-                                            <span class="item-seller">By @listing.Seller?.FullName</span>
+                                            <span class="item-seller">By @(listing.Seller?.FullName ?? "Unknown")</span>
                                             <div class="owner-actions">
                                                 <button class="btn btn-outline btn-sm" @onclick="() => EditListing(listing.Id)">
                                                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -195,6 +203,12 @@
                                 </div>
                             }
                         </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <p>No active listings found.</p>
                     </div>
                 }
 
@@ -236,7 +250,7 @@
                                             </div>
                                         </div>
                                         <div class="item-footer">
-                                            <span class="item-seller">By @listing.Seller?.FullName</span>
+                                            <span class="item-seller">By @(listing.Seller?.FullName ?? "Unknown")</span>
                                             <div class="owner-actions">
                                                 <button class="btn btn-outline btn-sm" @onclick="() => MarkAsAvailable(listing.Id)">
                                                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -270,24 +284,29 @@
     private List<MarketplaceItemDto> soldListings = new();
     private int soldItemsCount = 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadUserProfile();
-        await LoadUserListings();
+        if (firstRender)
+        {
+            await LoadUserProfile();
+            await LoadUserListings();
+            StateHasChanged(); 
+        }
     }
+    private string? errorMessage;
+
 
     private async Task LoadUserProfile()
     {
         try
         {
-            // Option 1: Get user info from API (recommended for consistency)
             var userIdString = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userId");
             if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
             {
                 currentUser = await UserService.GetUserByIdAsync(userId);
             }
 
-            // Option 2: Fallback to sessionStorage if API call fails
+            // Fallback to sessionStorage if API call fails
             if (currentUser == null)
             {
                 var fullName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "fullName");
@@ -295,6 +314,7 @@
                 var program = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "program");
                 var yearLevel = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "yearLevel");
                 var campus = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "campusLocation");
+                var studentNumber = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "studentNumber");
 
                 if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out userId))
                 {
@@ -305,8 +325,9 @@
                         Email = email ?? "",
                         Program = program ?? "",
                         YearLevel = yearLevel ?? "",
+                        StudentNumber = studentNumber ?? "",
                         CampusLocation = Enum.TryParse<CampusLocation>(campus, out var cl) ? cl : CampusLocation.MainCampus,
-                        CreatedAt = DateTime.UtcNow // Default value since we don't have it in sessionStorage
+                        CreatedAt = DateTime.UtcNow
                     };
                 }
             }
@@ -324,14 +345,48 @@
             if (currentUser != null)
             {
                 userListings = await MarketplaceService.GetUserListingsAsync(currentUser.Id);
-                activeListings = userListings.Where(l => l.Status == MarketplaceItemStatus.Active).ToList();
-                soldListings = userListings.Where(l => l.Status == MarketplaceItemStatus.Sold).ToList();
-                soldItemsCount = soldListings.Count;
+
+                if (userListings.Any())
+                {
+                    activeListings = userListings.Where(listing =>
+                    {
+                        var numericStatus = Convert.ToInt32(listing.Status);
+
+                        // Handle both the correct enum values and legacy 0 values
+                        return numericStatus == (int)MarketplaceItemStatus.Active ||  // 1
+                               numericStatus == 0;  // Legacy active status
+                    }).ToList();
+
+                    soldListings = userListings.Where(listing =>
+                    {
+                        var numericStatus = Convert.ToInt32(listing.Status);
+                        return numericStatus == (int)MarketplaceItemStatus.Sold;  // 2
+                    }).ToList();
+
+                    // Debug output
+                    Console.WriteLine($"DEBUG: Total listings: {userListings.Count}");
+                    Console.WriteLine($"DEBUG: Active listings: {activeListings.Count}");
+                    Console.WriteLine($"DEBUG: Sold listings: {soldListings.Count}");
+
+                    foreach (var item in userListings)
+                    {
+                        var status = Convert.ToInt32(item.Status);
+                        Console.WriteLine($"DEBUG: {item.Title} - Status: {status}");
+                    }
+                }
+                else
+                {
+                    activeListings = new List<MarketplaceItemDto>();
+                    soldListings = new List<MarketplaceItemDto>();
+                }
+
+                soldItemsCount = soldListings?.Count ?? 0;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading listings: {ex.Message}");
+            errorMessage = $"Error loading listings: {ex.Message}";
         }
     }
 
@@ -389,15 +444,6 @@
         return "Just now";
     }
 
-    private string GetCampusLocationName(CampusLocation campusLocation) => campusLocation switch
-    {
-        CampusLocation.MainCampus => "Main Campus",
-        CampusLocation.Congressional => "Congressional",
-        CampusLocation.BagongSilang => "Bagong Silang",
-        CampusLocation.Camarin => "Camarin",
-        _ => "Unknown"
-    };
-
     private string GetMeetupPreferenceName(MeetupPreference meetupPreference) => meetupPreference switch
     {
         MeetupPreference.CampusOnly => "Campus Only",
@@ -408,14 +454,11 @@
 
     private void EditProfile()
     {
-        // TODO: Implement edit profile functionality
         Console.WriteLine("Edit profile clicked");
-        // Example: NavigationManager.NavigateTo("/profile/edit");
     }
 
     private void EditListing(int listingId)
     {
         Console.WriteLine($"Edit listing {listingId} clicked");
-        // Example: NavigationManager.NavigateTo($"/marketplace/edit/{listingId}");
     }
 }
