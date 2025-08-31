@@ -34,6 +34,7 @@ namespace CampusHub.Domain.Entities
         public bool IsActive { get; set; } = true;
         public MeetupPreference MeetupPreference { get; set; }
 
+        public MarketplaceItemStatus Status { get; set; } = MarketplaceItemStatus.Active;
         public virtual ICollection<MarketplaceLike> Likes { get; set; } = new List<MarketplaceLike>();
     }
 }

@@ -1,11 +1,11 @@
 ﻿@page "/main-marketplace"
 @layout Layout.MainLayout
 @using CampusHub.Application.DTO
-@using CampusHub.Application.Interfaces
 @using CampusHub.Domain.Entities
-@inject IMarketplaceService MarketplaceService
+@using System.Text.Json
+@using System.Text
+@inject HttpClient HttpClient
 @inject NavigationManager Navigation
-@inject IUserService UserService
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
@@ -247,6 +247,7 @@
         </div>
     </div>
 }
+
 @if (ShowPostItemDialog)
 {
     <div class="dialog-overlay" @onclick="ClosePostDialog">
@@ -406,6 +407,12 @@
     private int? SelectedLocationFilter;
     private int? SelectedCategoryFilter;
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadMarketplaceItems();
@@ -419,10 +426,26 @@
             StateHasChanged();
 
             var currentUserId = await GetCurrentUserIdFromSession();
+            var queryString = currentUserId.HasValue ? $"?userId={currentUserId}" : "";
 
-            var items = await MarketplaceService.GetAllItemsAsync(currentUserId);
-            AllMarketplaceItems = items.ToList();
-            MarketplaceItems = AllMarketplaceItems.ToList();
+            var response = await HttpClient.GetAsync($"/api/marketplace{queryString}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var items = JsonSerializer.Deserialize<IEnumerable<MarketplaceItemDto>>(json, JsonOptions);
+                
+                if (items != null)
+                {
+                    AllMarketplaceItems = items.ToList();
+                    MarketplaceItems = AllMarketplaceItems.ToList();
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ShowMessage($"Error loading marketplace items: {response.StatusCode}", "error");
+            }
         }
         catch (Exception ex)
         {
@@ -521,11 +544,22 @@
             NewItem.SellerId = currentUser.Id;
             NewItem.SellerName = currentUser.FullName ?? currentUser.Username ?? "Unknown User";
 
-            var createdItem = await MarketplaceService.CreateItemAsync(NewItem);
+            var json = JsonSerializer.Serialize(NewItem, JsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            ShowMessage("Item posted successfully!", "success");
-            ClosePostDialog();
-            await LoadMarketplaceItems(); 
+            var response = await HttpClient.PostAsync("/api/marketplace", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ShowMessage("Item posted successfully!", "success");
+                ClosePostDialog();
+                await LoadMarketplaceItems(); 
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ShowMessage($"Error posting item: {response.StatusCode}", "error");
+            }
         }
         catch (Exception ex)
         {
@@ -578,17 +612,31 @@
 
             if (SelectedLocationFilter == null && SelectedCategoryFilter == null)
             {
-                var allItems = await MarketplaceService.GetAllItemsAsync(currentUserId);
-                MarketplaceItems = allItems.ToList();
+                // Load all items via API
+                var queryString = currentUserId.HasValue ? $"?userId={currentUserId}" : "";
+                var response = await HttpClient.GetAsync($"/api/marketplace{queryString}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var items = JsonSerializer.Deserialize<IEnumerable<MarketplaceItemDto>>(json, JsonOptions);
+                    
+                    if (items != null)
+                    {
+                        MarketplaceItems = items.ToList();
+                    }
+                }
             }
             else
             {
+                // Apply client-side filtering to cached results
                 var filteredItems = AllMarketplaceItems.AsQueryable();
 
                 if (SelectedLocationFilter.HasValue)
                 {
                     var location = (CampusLocation)SelectedLocationFilter.Value;
-                    filteredItems = filteredItems.Where(i => i.Location == location.ToString());
+                    var locationDisplayName = GetLocationDisplayName(location);
+                    filteredItems = filteredItems.Where(i => i.Location == locationDisplayName);
                 }
 
                 if (SelectedCategoryFilter.HasValue)
@@ -619,31 +667,36 @@
                 return;
             }
 
-            var item = MarketplaceItems.FirstOrDefault(i => i.Id == itemId);
-            if (item == null) return;
+            var toggleDto = new { ItemId = itemId, UserId = currentUser.Id };
+            var json = JsonSerializer.Serialize(toggleDto, JsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var success = await MarketplaceService.ToggleLikeAsync(itemId, currentUser.Id);
+            var response = await HttpClient.PostAsync($"/api/marketplace/{itemId}/toggle-like", content);
 
-            if (success)
+            if (response.IsSuccessStatusCode)
             {
-                if (item.IsLiked)
+                var item = MarketplaceItems.FirstOrDefault(i => i.Id == itemId);
+                if (item != null)
                 {
-                    item.IsLiked = false;
-                    item.LikesCount = Math.Max(0, item.LikesCount - 1);
-                }
-                else
-                {
-                    item.IsLiked = true;
-                    item.LikesCount++;
-                }
+                    if (item.IsLiked)
+                    {
+                        item.IsLiked = false;
+                        item.LikesCount = Math.Max(0, item.LikesCount - 1);
+                    }
+                    else
+                    {
+                        item.IsLiked = true;
+                        item.LikesCount++;
+                    }
 
-                if (SelectedProduct?.Id == itemId)
-                {
-                    SelectedProduct.IsLiked = item.IsLiked;
-                    SelectedProduct.LikesCount = item.LikesCount;
-                }
+                    if (SelectedProduct?.Id == itemId)
+                    {
+                        SelectedProduct.IsLiked = item.IsLiked;
+                        SelectedProduct.LikesCount = item.LikesCount;
+                    }
 
-                StateHasChanged();
+                    StateHasChanged();
+                }
             }
             else
             {
@@ -691,6 +744,18 @@
             };
         }
         return "badge-secondary";
+    }
+
+    private static string GetLocationDisplayName(CampusLocation location)
+    {
+        return location switch
+        {
+            CampusLocation.MainCampus => "Main Campus",
+            CampusLocation.Congressional => "Congressional Extension Campus",
+            CampusLocation.BagongSilang => "Bagong Silang Extension Campus",
+            CampusLocation.Camarin => "Camarin Extension Campus",
+            _ => "Unknown"
+        };
     }
 
     private void ShowMessage(string message, string type)

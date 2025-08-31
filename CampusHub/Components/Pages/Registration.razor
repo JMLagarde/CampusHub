@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/register"
 @rendermode InteractiveServer
 @inject IDropdownService DropdownService
 @inject IUserService UserService
@@ -117,7 +117,7 @@
 
                 <p class="login-intro" style="margin-top: var(--spacing-4); text-align: center;">
                     Already have an account?
-                    <a href="/login" style="color: var(--primary-green); font-weight: 500; text-decoration: none;">
+                    <a href="/" style="color: var(--primary-green); font-weight: 500; text-decoration: none;">
                         Sign In
                     </a>
                 </p>
@@ -144,7 +144,6 @@
         catch (Exception ex)
         {
             errorMessage = "Failed to load form data. Please refresh the page.";
-            // Use server-side console logging instead of browser console
             Console.WriteLine($"Error loading dropdown data: {ex.Message}");
         }
     }
@@ -163,9 +162,8 @@
             {
                 successMessage = "Registration successful! Redirecting to login...";
 
-                // Wait a moment to show success message, then redirect
                 await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
+                Navigation.NavigateTo("/");
             }
             else
             {

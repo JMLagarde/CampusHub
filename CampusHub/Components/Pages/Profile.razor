@@ -1,0 +1,421 @@
+﻿@page "/profile"
+@using CampusHub.Application.DTO
+@using CampusHub.Application.Interfaces
+@using CampusHub.Domain.Entities
+@inject IJSRuntime JSRuntime
+@inject IUserService UserService
+@inject IMarketplaceService MarketplaceService
+
+<div id="profile-content" class="tab-content">
+    <div class="profile-container">
+        <div class="profile-header">
+            <div class="profile-title">
+                <h2>My Profile</h2>
+                <p class="profile-subtitle">View and manage your account information and listings</p>
+            </div>
+            <button class="btn btn-outline" @onclick="EditProfile">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit Profile
+            </button>
+        </div>
+
+        <button class="profile-tab @(activeTab == "info" ? "active" : "")"
+                @onclick="@(() => ShowProfileTab("info"))">
+            Profile Info
+        </button>
+
+        @if (currentUser != null)
+        {
+            <!-- Profile Info -->
+            <div id="profile-info" class="profile-tab-content @(activeTab == "info" ? "active" : "")"
+                 style="display: @(activeTab == "info" ? "block" : "none")">
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3>Profile Information</h3>
+                        <p class="card-description">Your basic account information and details</p>
+                    </div>
+                    <div class="profile-card-content">
+                        <div class="profile-main">
+                            <div class="profile-avatar-section">
+                                <div class="profile-avatar">
+                                    @if (!string.IsNullOrEmpty(currentUser.ProfilePictureUrl))
+                                    {
+                                        <img src="@currentUser.ProfilePictureUrl" alt="Profile Picture" />
+                                    }
+                                    else
+                                    {
+                                        <span>@GetInitials(currentUser.FullName)</span>
+                                    }
+                                </div>
+                                <div class="profile-basic-info">
+                                    <h3>@currentUser.FullName</h3>
+                                    <div class="profile-badges">
+                                        <span class="badge badge-outline">@currentUser.StudentNumber</span>
+                                        <span class="badge badge-secondary">@currentUser.YearLevel</span>
+                                    </div>
+                                    <p class="profile-program">@currentUser.Program</p>
+                                </div>
+                            </div>
+
+                            <div class="profile-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Full Name</label>
+                                        <input type="text" value="@currentUser.FullName" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Student Number</label>
+                                        <input type="text" value="@currentUser.StudentNumber" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Email Address</label>
+                                        <input type="email" value="@currentUser.Email" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Phone Number</label>
+                                        <input type="text" value="@currentUser.ContactNumber" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Program</label>
+                                        <input type="text" value="@currentUser.Program" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Year Level</label>
+                                        <input type="text" value="@currentUser.YearLevel" readonly>
+                                    </div>
+                                </div>
+                                <div class="join-date">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                    Joined @currentUser.CreatedAt.ToString("MMMM dd, yyyy")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Listings -->
+            <div id="profile-listings" class="profile-tab-content @(activeTab == "listings" ? "active" : "")" style="display: @(activeTab == "listings" ? "block" : "none")">
+                <div class="listings-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <polyline points="3.27,6.96 12,12.01 20.73,6.96" />
+                                <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            <div class="stat-info">
+                                <div class="stat-number">@userListings.Count</div>
+                                <div class="stat-label">Total Listings</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <path d="M16 10a4 4 0 0 1-8 0" />
+                            </svg>
+                            <div class="stat-info">
+                                <div class="stat-number">@soldItemsCount</div>
+                                <div class="stat-label">Items Sold</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (activeListings.Any())
+                {
+                    <div class="listings-section">
+                        <h3>Active Listings (@activeListings.Count)</h3>
+                        <div class="marketplace-grid">
+                            @foreach (var listing in activeListings)
+                            {
+                                <div class="marketplace-card owner-card">
+                                    <div class="item-image">
+                                        <img src="@(!string.IsNullOrEmpty(listing.ImageUrl) ? listing.ImageUrl : "/images/placeholder.jpg")" alt="@listing.Title">
+                                        <div class="item-badges">
+                                            <span class="badge badge-secondary">@listing.Condition</span>
+                                        </div>
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-header">
+                                            <h3 class="item-title">@listing.Title</h3>
+                                            <p class="item-price">₱@listing.Price.ToString("N0")</p>
+                                        </div>
+                                        <p class="item-description">@listing.Description</p>
+                                        <div class="item-meta">
+                                            <div class="item-location">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                    <circle cx="12" cy="10" r="3" />
+                                                </svg>
+                                                @GetMeetupPreferenceName(listing.MeetupPreference)
+                                            </div>
+                                            <div class="item-date">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <polyline points="12,6 12,12 16,14" />
+                                                </svg>
+                                                @GetTimeAgo(listing.CreatedAt)
+                                            </div>
+                                        </div>
+                                        <div class="item-footer">
+                                            <span class="item-seller">By @listing.Seller?.FullName</span>
+                                            <div class="owner-actions">
+                                                <button class="btn btn-outline btn-sm" @onclick="() => EditListing(listing.Id)">
+                                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                        <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button class="btn btn-outline btn-sm" @onclick="() => MarkAsSold(listing.Id)">
+                                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <polyline points="20,6 9,17 4,12" />
+                                                    </svg>
+                                                    Mark Sold
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (soldListings.Any())
+                {
+                    <div class="listings-section">
+                        <h3>Sold Items (@soldListings.Count)</h3>
+                        <div class="marketplace-grid">
+                            @foreach (var listing in soldListings)
+                            {
+                                <div class="marketplace-card sold-item">
+                                    <div class="item-image">
+                                        <img src="@(!string.IsNullOrEmpty(listing.ImageUrl) ? listing.ImageUrl : "/images/placeholder.jpg")" alt="@listing.Title">
+                                        <div class="item-badges">
+                                            <span class="badge badge-secondary">@listing.Condition</span>
+                                            <span class="badge badge-destructive">SOLD</span>
+                                        </div>
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-header">
+                                            <h3 class="item-title sold-title">@listing.Title</h3>
+                                            <p class="item-price sold-price">₱@listing.Price.ToString("N0")</p>
+                                        </div>
+                                        <p class="item-description">@listing.Description</p>
+                                        <div class="item-meta">
+                                            <div class="item-location">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                    <circle cx="12" cy="10" r="3" />
+                                                </svg>
+                                                @GetMeetupPreferenceName(listing.MeetupPreference)
+                                            </div>
+                                            <div class="item-date">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <polyline points="12,6 12,12 16,14" />
+                                                </svg>
+                                                @GetTimeAgo(listing.UpdatedAt ?? listing.CreatedAt)
+                                            </div>
+                                        </div>
+                                        <div class="item-footer">
+                                            <span class="item-seller">By @listing.Seller?.FullName</span>
+                                            <div class="owner-actions">
+                                                <button class="btn btn-outline btn-sm" @onclick="() => MarkAsAvailable(listing.Id)">
+                                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                    Mark Available
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="loading-spinner">Loading profile...</div>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "info";
+    private CurrentUserDto? currentUser;
+    private List<MarketplaceItemDto> userListings = new();
+    private List<MarketplaceItemDto> activeListings = new();
+    private List<MarketplaceItemDto> soldListings = new();
+    private int soldItemsCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+        await LoadUserListings();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            // Option 1: Get user info from API (recommended for consistency)
+            var userIdString = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userId");
+            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
+            {
+                currentUser = await UserService.GetUserByIdAsync(userId);
+            }
+
+            // Option 2: Fallback to sessionStorage if API call fails
+            if (currentUser == null)
+            {
+                var fullName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "fullName");
+                var email = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "email");
+                var program = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "program");
+                var yearLevel = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "yearLevel");
+                var campus = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "campusLocation");
+
+                if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out userId))
+                {
+                    currentUser = new CurrentUserDto
+                    {
+                        Id = userId,
+                        FullName = fullName ?? "",
+                        Email = email ?? "",
+                        Program = program ?? "",
+                        YearLevel = yearLevel ?? "",
+                        CampusLocation = Enum.TryParse<CampusLocation>(campus, out var cl) ? cl : CampusLocation.MainCampus,
+                        CreatedAt = DateTime.UtcNow // Default value since we don't have it in sessionStorage
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading profile: {ex.Message}");
+        }
+    }
+
+    private async Task LoadUserListings()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                userListings = await MarketplaceService.GetUserListingsAsync(currentUser.Id);
+                activeListings = userListings.Where(l => l.Status == MarketplaceItemStatus.Active).ToList();
+                soldListings = userListings.Where(l => l.Status == MarketplaceItemStatus.Sold).ToList();
+                soldItemsCount = soldListings.Count;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading listings: {ex.Message}");
+        }
+    }
+
+    private void ShowProfileTab(string tabName)
+    {
+        activeTab = tabName;
+        StateHasChanged();
+    }
+
+    private async Task MarkAsSold(int listingId)
+    {
+        try
+        {
+            await MarketplaceService.UpdateItemStatusAsync(listingId, MarketplaceItemStatus.Sold);
+            await LoadUserListings();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error marking as sold: {ex.Message}");
+        }
+    }
+
+    private async Task MarkAsAvailable(int listingId)
+    {
+        try
+        {
+            await MarketplaceService.UpdateItemStatusAsync(listingId, MarketplaceItemStatus.Active);
+            await LoadUserListings();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error marking as available: {ex.Message}");
+        }
+    }
+
+    private string GetInitials(string fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return "??";
+
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.Now - dateTime;
+
+        if (timeSpan.Days > 0) return $"{timeSpan.Days} day{(timeSpan.Days == 1 ? "" : "s")} ago";
+        if (timeSpan.Hours > 0) return $"{timeSpan.Hours} hour{(timeSpan.Hours == 1 ? "" : "s")} ago";
+        if (timeSpan.Minutes > 0) return $"{timeSpan.Minutes} minute{(timeSpan.Minutes == 1 ? "" : "s")} ago";
+        return "Just now";
+    }
+
+    private string GetCampusLocationName(CampusLocation campusLocation) => campusLocation switch
+    {
+        CampusLocation.MainCampus => "Main Campus",
+        CampusLocation.Congressional => "Congressional",
+        CampusLocation.BagongSilang => "Bagong Silang",
+        CampusLocation.Camarin => "Camarin",
+        _ => "Unknown"
+    };
+
+    private string GetMeetupPreferenceName(MeetupPreference meetupPreference) => meetupPreference switch
+    {
+        MeetupPreference.CampusOnly => "Campus Only",
+        MeetupPreference.NearCampus => "Near Campus",
+        MeetupPreference.Flexible => "Flexible",
+        _ => "Not Specified"
+    };
+
+    private void EditProfile()
+    {
+        // TODO: Implement edit profile functionality
+        Console.WriteLine("Edit profile clicked");
+        // Example: NavigationManager.NavigateTo("/profile/edit");
+    }
+
+    private void EditListing(int listingId)
+    {
+        Console.WriteLine($"Edit listing {listingId} clicked");
+        // Example: NavigationManager.NavigateTo($"/marketplace/edit/{listingId}");
+    }
+}

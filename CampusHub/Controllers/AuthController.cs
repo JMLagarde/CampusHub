@@ -43,8 +43,7 @@ namespace CampusHub.Presentation.Controllers
             try
             {
                 var userIdResult = await _userService.CreateUserAsync(createUserDto);
-
-               // return userIdResult.ToActionResult(); //pinabago
+                
                 return Ok(new { message = "User registered successfully" });
             }
             catch (InvalidOperationException ex)
