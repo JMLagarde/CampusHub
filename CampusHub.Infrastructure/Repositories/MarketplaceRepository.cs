@@ -126,5 +126,47 @@ namespace CampusHub.Infrastructure.Repositories
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
         }
+
+        // WISHLIST METHODS
+        public async Task<IEnumerable<MarketplaceItem>> GetUserWishlistAsync(int userId)
+        {
+            return await _context.MarketplaceLikes
+                .Where(like => like.UserId == userId)
+                .Include(like => like.MarketplaceItem)
+                .ThenInclude(item => item.Likes)
+                .Where(like => like.MarketplaceItem.IsActive)
+                .Select(like => like.MarketplaceItem)
+                .OrderByDescending(item => item.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetUserWishlistCountAsync(int userId)
+        {
+            return await _context.MarketplaceLikes
+                .Where(like => like.UserId == userId)
+                .CountAsync(like => like.MarketplaceItem.IsActive);
+        }
+
+        public async Task<bool> RemoveFromWishlistAsync(int itemId, int userId)
+        {
+            var like = await _context.MarketplaceLikes
+                .FirstOrDefaultAsync(x => x.MarketplaceItemId == itemId && x.UserId == userId);
+
+            if (like != null)
+            {
+                _context.MarketplaceLikes.Remove(like);
+
+                var item = await _context.MarketplaceItems.FindAsync(itemId);
+                if (item != null)
+                {
+                    item.LikesCount = Math.Max(0, item.LikesCount - 1);
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            return false;
+        }
     }
 }

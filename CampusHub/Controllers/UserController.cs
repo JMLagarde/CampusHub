@@ -21,8 +21,8 @@ namespace CampusHub.Presentation.Controllers
             _marketplaceService = marketplaceService;
         }
 
-        [HttpGet("profile")]
-        public async Task<ActionResult<CurrentUserDto>> GetUserProfile()
+        [HttpPut("profile")]
+        public async Task<ActionResult> UpdateUserProfile([FromBody] CurrentUserDto userDto)
         {
             try
             {
@@ -32,17 +32,30 @@ namespace CampusHub.Presentation.Controllers
                     return Unauthorized("User not found");
                 }
 
-                var user = await _userService.GetUserByIdAsync(userId.Value);
-                if (user == null)
+                // Ensure the user can only update their own profile
+                if (userDto.Id != userId.Value)
                 {
-                    return NotFound("User profile not found");
+                    return Forbid("You can only update your own profile");
                 }
 
-                return Ok(user);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var success = await _userService.UpdateUserProfileAsync(userDto);
+                if (success)
+                {
+                    return Ok(new { message = "Profile updated successfully" });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Failed to update profile" });
+                }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
 
@@ -65,8 +78,6 @@ namespace CampusHub.Presentation.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
-
 
 
 
@@ -96,7 +107,6 @@ namespace CampusHub.Presentation.Controllers
         }
 
 
-
         private int? GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -106,5 +116,81 @@ namespace CampusHub.Presentation.Controllers
             }
             return null;
         }
+
+        /// <summary>
+        /// Get current user's wishlist
+        /// </summary>
+        [HttpGet("wishlist")]
+        public async Task<ActionResult<List<MarketplaceItemDto>>> GetUserWishlist()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                var wishlistItems = await _marketplaceService.GetUserWishlistAsync(userId.Value);
+                return Ok(wishlistItems);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get current user's wishlist count
+        /// </summary>
+        [HttpGet("wishlist/count")]
+        public async Task<ActionResult<int>> GetUserWishlistCount()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                var count = await _marketplaceService.GetUserWishlistCountAsync(userId.Value);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Remove item from current user's wishlist
+        /// </summary>
+        [HttpDelete("wishlist/item/{itemId}")]
+        public async Task<IActionResult> RemoveFromWishlist(int itemId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                var success = await _marketplaceService.RemoveFromWishlistAsync(itemId, userId.Value);
+
+                if (!success)
+                {
+                    return NotFound(new { message = "Item not found in wishlist" });
+                }
+
+                return Ok(new { message = "Item removed from wishlist successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
     }
 }

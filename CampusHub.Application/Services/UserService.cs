@@ -82,7 +82,6 @@ namespace CampusHub.Application.Services
             return Task.CompletedTask;
         }
 
-        // Updated to return CurrentUserDto (consolidated from ProfileService)
         public async Task<CurrentUserDto?> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetUserWithDetailsAsync(userId);
@@ -102,9 +101,33 @@ namespace CampusHub.Application.Services
                 YearLevel = user.YearLevel?.Name ?? "Unknown",
                 Role = user.Role ?? "Student",
                 CreatedAt = user.DateRegistered ?? DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow,
                 ProfilePictureUrl = user.ProfilePictureUrl
             };
+        }
+
+        public async Task<bool> UpdateUserProfileAsync(CurrentUserDto userDto)
+        {
+            try
+            {
+                var existingUser = await _userRepository.GetUserWithDetailsAsync(userDto.Id);
+                if (existingUser == null)
+                    return false;
+
+                existingUser.FullName = userDto.FullName;
+                existingUser.StudentNumber = userDto.StudentNumber;
+                existingUser.Email = userDto.Email;
+                existingUser.ContactNumber = userDto.ContactNumber;
+                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                await _userRepository.UpdateAsync(existingUser);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating user profile: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<CreateUserDto?> GetUserByUsernameAsync(string username)
@@ -123,8 +146,6 @@ namespace CampusHub.Application.Services
         {
             return await _userRepository.UsernameExistsAsync(username);
         }
-
-
 
         public async Task<CurrentUserDto?> GetCurrentUserAsync(int userId)
         {
@@ -178,6 +199,5 @@ namespace CampusHub.Application.Services
                 ProfilePictureUrl = user.ProfilePictureUrl ?? string.Empty
             };
         }
-
     }
 }

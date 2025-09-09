@@ -67,7 +67,7 @@ namespace CampusHub.Application.Services
                 SellerId = dto.SellerId,
                 SellerName = dto.SellerName,
                 CreatedDate = DateTime.UtcNow,
-                Status = MarketplaceItemStatus.Active // Set default status
+                Status = MarketplaceItemStatus.Active
             };
 
             var createdItem = await _marketplaceRepository.CreateAsync(item);
@@ -152,7 +152,6 @@ namespace CampusHub.Application.Services
             return itemDtos.OrderByDescending(x => x.CreatedDate);
         }
 
-        // Added missing methods for Profile.razor
         public async Task<List<MarketplaceItemDto>> GetUserListingsAsync(int userId)
         {
             var items = await GetItemsBySellerAsync(userId);
@@ -181,6 +180,33 @@ namespace CampusHub.Application.Services
             await ToggleLikeAsync(toggleDto.MarketplaceItemId, toggleDto.UserId);
         }
 
+        // WISHLIST METHODS
+        public async Task<List<MarketplaceItemDto>> GetUserWishlistAsync(int userId)
+        {
+            var items = await _marketplaceRepository.GetUserWishlistAsync(userId);
+            var itemDtos = new List<MarketplaceItemDto>();
+
+            foreach (var item in items)
+            {
+                var dto = MapToDto(item);
+                dto.IsLiked = true; // All wishlist items are liked by definition
+                dto.TimeAgo = GetTimeAgo(item.CreatedDate);
+                itemDtos.Add(dto);
+            }
+
+            return itemDtos.OrderByDescending(x => x.CreatedDate).ToList();
+        }
+
+        public async Task<int> GetUserWishlistCountAsync(int userId)
+        {
+            return await _marketplaceRepository.GetUserWishlistCountAsync(userId);
+        }
+
+        public async Task<bool> RemoveFromWishlistAsync(int itemId, int userId)
+        {
+            return await _marketplaceRepository.RemoveFromWishlistAsync(itemId, userId);
+        }
+
         private static MarketplaceItemDto MapToDto(MarketplaceItem item)
         {
             return new MarketplaceItemDto
@@ -198,8 +224,9 @@ namespace CampusHub.Application.Services
                 SellerId = item.SellerId,
                 LikesCount = item.LikesCount,
                 CreatedDate = item.CreatedDate,
-                Status = item.Status, // Add status to mapping
-                UpdatedAt = item.UpdatedDate
+                Status = item.Status,
+                UpdatedAt = item.UpdatedDate,
+                CreatedAt = item.CreatedDate
             };
         }
 

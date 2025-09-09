@@ -14,5 +14,8 @@ namespace CampusHub.Application.Interfaces
         Task<bool> ToggleLikeAsync(int itemId, int userId);
         Task<IEnumerable<MarketplaceItem>> GetByLocationAsync(CampusLocation location);
         Task<IEnumerable<MarketplaceItem>> GetBySellerAsync(int sellerId);
+        Task<IEnumerable<MarketplaceItem>> GetUserWishlistAsync(int userId);
+        Task<int> GetUserWishlistCountAsync(int userId);
+        Task<bool> RemoveFromWishlistAsync(int itemId, int userId);
     }
 }
