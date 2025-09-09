@@ -286,6 +286,7 @@ body {
         background-color: var(--accent);
     }
 
+
 /* Badges */
 .badge {
     display: inline-flex;
@@ -1143,6 +1144,8 @@ textarea {
 .profile-container {
     max-width: 72rem;
     margin: 0 auto;
+    z-index: auto !important;
+    overflow: visible !important;
 }
 
 .profile-header {
@@ -1206,10 +1209,15 @@ textarea {
 
 .profile-card-header {
     padding: var(--spacing-6) var(--spacing-6) 0;
+    display: flex;
+    justify-content: space-between; 
+    align-items: flex-start; 
+    gap: 0.5rem;
 }
 
 .profile-card-content {
     padding: var(--spacing-6);
+    position: relative;
 }
 
 .profile-avatar-section {
@@ -1478,7 +1486,387 @@ textarea:focus {
     padding: 0 var(--spacing-6) var(--spacing-6);
 }
 
+/* Edit Mode Styles */
+.edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
 
+    .edit-actions .btn {
+        min-width: 120px;
+    }
 
+/* Form Error Styles */
+.form-group input.error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
 
+.error-text {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+}
 
+/* Alert Styles */
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.alert-error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.alert-success {
+    background-color: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+/* Loading Spinner */
+.spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Form Input Focus States for Edit Mode */
+.profile-form input:not([readonly]):focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.profile-form input:not([readonly]) {
+    background-color: #ffffff;
+    cursor: text;
+}
+
+.profile-form input[readonly] {
+    background-color: #f9fafb;
+    cursor: default;
+}
+
+/* Button Disabled State */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Profile Listing Edit Styles */
+.marketplace-card {
+    transition: all 0.3s ease;
+    transform-origin: top center;
+    overflow: hidden;
+}
+
+    .marketplace-card.editing {
+        transform: scale(1.02);
+        z-index: 10;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        border: 2px solid var(--primary-color, #3b82f6);
+    }
+
+    .marketplace-card.expanded {
+        min-height: auto;
+    }
+
+/* Edit form styles */
+.edit-listing-form {
+    padding: 1.5rem;
+    background: var(--card-background, #ffffff);
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+    .edit-listing-form .form-group {
+        margin-bottom: 1rem;
+    }
+
+        .edit-listing-form .form-group:last-of-type {
+            margin-bottom: 1.5rem;
+        }
+
+    .edit-listing-form label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-primary, #1f2937);
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .edit-listing-form input,
+    .edit-listing-form textarea,
+    .edit-listing-form select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #d1d5db);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        background: var(--input-background, #ffffff);
+    }
+
+        .edit-listing-form input:focus,
+        .edit-listing-form textarea:focus,
+        .edit-listing-form select:focus {
+            outline: none;
+            border-color: var(--primary-color, #3b82f6);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .edit-listing-form input.error,
+        .edit-listing-form textarea.error,
+        .edit-listing-form select.error {
+            border-color: var(--error-color, #ef4444);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+    .edit-listing-form textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .edit-listing-form .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+@media (max-width: 768px) {
+    .edit-listing-form .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+}
+
+/* Edit actions */
+.edit-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-start;
+    margin-top: 1rem;
+}
+
+    .edit-actions .btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-decoration: none;
+    }
+
+        .edit-actions .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .edit-actions .btn-primary {
+        background: var(--primary-color, #3b82f6);
+        color: white;
+    }
+
+        .edit-actions .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover, #2563eb);
+            transform: translateY(-1px);
+        }
+
+    .edit-actions .btn-outline {
+        background: transparent;
+        color: var(--text-secondary, #6b7280);
+        border-color: var(--border-color, #d1d5db);
+    }
+
+        .edit-actions .btn-outline:hover:not(:disabled) {
+            background: var(--gray-50, #f9fafb);
+            border-color: var(--gray-300, #d1d5db);
+        }
+
+/* Spinner animation */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error text */
+.error-text {
+    display: block;
+    color: var(--error-color, #ef4444);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+/* Alert messages for listings */
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color, #dc2626);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success-color, #059669);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Smooth transitions for card state changes */
+.marketplace-card .item-content {
+    transition: all 0.3s ease;
+}
+
+.marketplace-card:not(.editing) .item-content {
+    padding: 1rem;
+}
+
+.marketplace-card.editing .item-content {
+    padding: 0.5rem;
+}
+
+/* Icon styles */
+.icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+/* Grid responsiveness for editing cards */
+.marketplace-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .marketplace-card.editing {
+        transform: none;
+        margin: 0 -1rem;
+        border-radius: 0;
+    }
+
+    .edit-listing-form {
+        padding: 1rem;
+    }
+}
+
+/* Ensure proper stacking for expanded cards */
+.marketplace-card.editing {
+    position: relative;
+}
+
+/* Fade in animation for edit form */
+.edit-listing-form {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 2147483647 !important; 
+    backdrop-filter: blur(3px) !important;
+}
+
+.modal-container {
+    position: relative !important;
+    z-index: 2147483647 !important;
+    background: white !important;
+    border-radius: 12px !important;
+    max-width: 600px !important;
+    width: 90% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
+}
+
+.modal-header {
+    padding: 24px 24px 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: calc(90vh - 140px);
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 16px 24px 24px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: #fafafa;
+}

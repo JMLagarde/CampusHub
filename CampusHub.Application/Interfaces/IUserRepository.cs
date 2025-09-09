@@ -10,6 +10,7 @@ namespace CampusHub.Application.Interfaces
         Task<int> AddAsync(User user);
         Task<bool> UsernameExistsAsync(string username);
         Task<User?> GetUserWithDetailsAsync(int id); 
-        Task<List<User>> GetAllUsersWithDetailsAsync(); 
+        Task<List<User>> GetAllUsersWithDetailsAsync();
+        Task<bool> UpdateAsync(User user);
     }
 }

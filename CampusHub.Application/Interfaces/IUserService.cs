@@ -13,5 +13,6 @@ namespace CampusHub.Application.Interfaces
         Task<List<CreateUserDto>> GetAllUsersAsync();
         Task<bool> UsernameExistsAsync(string username);
         Task<CurrentUserDto?> GetCurrentUserAsync(int userId);
+        Task<bool> UpdateUserProfileAsync(CurrentUserDto userDto);
     }
 }

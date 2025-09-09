@@ -8,23 +8,16 @@
 @inject IUserService UserService
 @inject IMarketplaceService MarketplaceService
 
-<div id="profile-content" class="tab-content active" >
+<div id="profile-content" class="tab-content active">
     <div class="profile-container">
         <div class="profile-header">
             <div class="profile-title">
                 <h2>My Profile</h2>
                 <p class="profile-subtitle">View and manage your account information and listings</p>
             </div>
-            <button class="btn btn-outline" @onclick="EditProfile">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                Edit Profile
-            </button>
         </div>
 
-        <!-- Fixed: Added proper tab navigation container -->
+        <!-- Nav Tab -->
         <div class="profile-tabs">
             <button class="profile-tab @(activeTab == "info" ? "active" : "")"
                     @onclick="@(() => ShowProfileTab("info"))">
@@ -33,6 +26,10 @@
             <button class="profile-tab @(activeTab == "listings" ? "active" : "")"
                     @onclick="@(() => ShowProfileTab("listings"))">
                 My Listings
+            </button>
+            <button class="profile-tab @(activeTab == "liked" ? "active" : "")"
+                    @onclick="@(() => ShowProfileTab("liked"))">
+                Liked Items (@likedItems.Count)
             </button>
         </div>
 
@@ -68,35 +65,148 @@
                                 </div>
                             </div>
 
+                            @if (!isEditMode)
+                            {
+                                <button class="btn btn-outline btn-profile" @onclick="EnableEditMode">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                    Edit Profile
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="edit-actions">
+                                    <button class="btn btn-primary btn-profile" @onclick="SaveProfile" disabled="@isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner"></span>
+                                        }
+                                        else
+                                        {
+                                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <polyline points="20,6 9,17 4,12" />
+                                            </svg>
+                                        }
+                                        @(isSaving ? "Saving..." : "Save Changes")
+                                    </button>
+                                    <button class="btn btn-outline btn-profile" @onclick="CancelEdit">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                        Cancel
+                                    </button>
+                                </div>
+                            }
+
+                            <!-- Show validation messages -->
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-error">
+                                    @errorMessage
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success">
+                                    @successMessage
+                                </div>
+                            }
+
                             <div class="profile-form">
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label>Full Name</label>
-                                        <input type="text" value="@currentUser.FullName" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="text" @bind="editUser.FullName" @bind:event="oninput" class="@(validationErrors.ContainsKey("FullName") ? "error" : "")">
+                                            @if (validationErrors.ContainsKey("FullName"))
+                                            {
+                                                <span class="error-text">@validationErrors["FullName"]</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="text" value="@currentUser.FullName" readonly>
+                                        }
                                     </div>
                                     <div class="form-group">
                                         <label>Student Number</label>
-                                        <input type="text" value="@currentUser.StudentNumber" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="text" @bind="editUser.StudentNumber" @bind:event="oninput" class="@(validationErrors.ContainsKey("StudentNumber") ? "error" : "")">
+                                            @if (validationErrors.ContainsKey("StudentNumber"))
+                                            {
+                                                <span class="error-text">@validationErrors["StudentNumber"]</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="text" value="@currentUser.StudentNumber" readonly>
+                                        }
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label>Email Address</label>
-                                        <input type="email" value="@currentUser.Email" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="email" @bind="editUser.Email" @bind:event="oninput" class="@(validationErrors.ContainsKey("Email") ? "error" : "")">
+                                            @if (validationErrors.ContainsKey("Email"))
+                                            {
+                                                <span class="error-text">@validationErrors["Email"]</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="email" value="@currentUser.Email" readonly>
+                                        }
                                     </div>
                                     <div class="form-group">
                                         <label>Phone Number</label>
-                                        <input type="text" value="@(currentUser.ContactNumber ?? "")" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="text" @bind="editUser.ContactNumber" @bind:event="oninput">
+                                        }
+                                        else
+                                        {
+                                            <input type="text" value="@(currentUser.ContactNumber ?? "")" readonly>
+                                        }
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label>Program</label>
-                                        <input type="text" value="@currentUser.Program" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="text" @bind="editUser.Program" @bind:event="oninput" class="@(validationErrors.ContainsKey("Program") ? "error" : "")">
+                                            @if (validationErrors.ContainsKey("Program"))
+                                            {
+                                                <span class="error-text">@validationErrors["Program"]</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="text" value="@currentUser.Program" readonly>
+                                        }
                                     </div>
                                     <div class="form-group">
                                         <label>Year Level</label>
-                                        <input type="text" value="@currentUser.YearLevel" readonly>
+                                        @if (isEditMode)
+                                        {
+                                            <input type="text" @bind="editUser.YearLevel" @bind:event="oninput" class="@(validationErrors.ContainsKey("YearLevel") ? "error" : "")">
+                                            @if (validationErrors.ContainsKey("YearLevel"))
+                                            {
+                                                <span class="error-text">@validationErrors["YearLevel"]</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="text" value="@currentUser.YearLevel" readonly>
+                                        }
                                     </div>
                                 </div>
                                 <div class="join-date">
@@ -114,7 +224,7 @@
                 </div>
             </div>
 
-            <!-- My Listings -->
+            <!-- My Listings section with popup editing -->
             <div id="profile-listings" style="display: @(activeTab == "listings" ? "block" : "none")">
                 <div class="listings-stats">
                     <div class="stat-card">
@@ -145,6 +255,21 @@
                     </div>
                 </div>
 
+                <!-- Show listing edit messages -->
+                @if (!string.IsNullOrEmpty(listingErrorMessage))
+                {
+                    <div class="alert alert-error">
+                        @listingErrorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(listingSuccessMessage))
+                {
+                    <div class="alert alert-success">
+                        @listingSuccessMessage
+                    </div>
+                }
+
                 @if (activeListings.Any())
                 {
                     <div class="listings-section">
@@ -162,7 +287,7 @@
                                     <div class="item-content">
                                         <div class="item-header">
                                             <h3 class="item-title">@listing.Title</h3>
-                                            <p class="item-price">₱@listing.Price.ToString("N0")</p>
+                                            <p class="item-price">₱@listing.Price.ToString("N2")</p>
                                         </div>
                                         <p class="item-description">@listing.Description</p>
                                         <div class="item-meta">
@@ -184,10 +309,10 @@
                                         <div class="item-footer">
                                             <span class="item-seller">By @(listing.Seller?.FullName ?? "Unknown")</span>
                                             <div class="owner-actions">
-                                                <button class="btn btn-outline btn-sm" @onclick="() => EditListing(listing.Id)">
+                                                <button class="btn btn-outline btn-sm" @onclick="() => ShowEditPopup(listing)">
                                                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                                        <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                                     </svg>
                                                     Edit
                                                 </button>
@@ -230,7 +355,7 @@
                                     <div class="item-content">
                                         <div class="item-header">
                                             <h3 class="item-title sold-title">@listing.Title</h3>
-                                            <p class="item-price sold-price">₱@listing.Price.ToString("N0")</p>
+                                            <p class="item-price sold-price">₱@listing.Price.ToString("N2")</p>
                                         </div>
                                         <p class="item-description">@listing.Description</p>
                                         <div class="item-meta">
@@ -268,6 +393,248 @@
                     </div>
                 }
             </div>
+
+            <!-- Liked Items section -->
+            <div id="profile-liked" style="display: @(activeTab == "liked" ? "block" : "none")">
+                <div class="listings-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <svg class="stat-icon red" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                            <div class="stat-info">
+                                <div class="stat-number">@likedItems.Count</div>
+                                <div class="stat-label">Liked Items</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <svg class="stat-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z" />
+                            </svg>
+                            <div class="stat-info">
+                                <div class="stat-number">@availableLikedItems</div>
+                                <div class="stat-label">Available Items</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Show liked items messages -->
+                @if (!string.IsNullOrEmpty(likedErrorMessage))
+                {
+                    <div class="alert alert-error">
+                        @likedErrorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(likedSuccessMessage))
+                {
+                    <div class="alert alert-success">
+                        @likedSuccessMessage
+                    </div>
+                }
+
+                @if (likedItems.Any())
+                {
+                    <div class="listings-section">
+                        <h3>Liked Items (@likedItems.Count)</h3>
+                        <div class="marketplace-grid">
+                            @foreach (var item in likedItems)
+                            {
+                                <div class="marketplace-card liked-item">
+                                    <div class="item-image">
+                                        <img src="@(!string.IsNullOrEmpty(item.ImageUrl) ? item.ImageUrl : "/images/placeholder.jpg")" alt="@item.Title">
+                                        <div class="item-badges">
+                                            <span class="badge badge-secondary">@item.Condition</span>
+                                            @if (item.Status == MarketplaceItemStatus.Sold)
+                                            {
+                                                <span class="badge badge-destructive">SOLD</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-primary">AVAILABLE</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-header">
+                                            <h3 class="item-title">@item.Title</h3>
+                                            <p class="item-price">₱@item.Price.ToString("N2")</p>
+                                        </div>
+                                        <p class="item-description">@item.Description</p>
+                                        <div class="item-meta">
+                                            <div class="item-location">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                    <circle cx="12" cy="10" r="3" />
+                                                </svg>
+                                                @GetMeetupPreferenceName(item.MeetupPreference)
+                                            </div>
+                                            <div class="item-date">
+                                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <polyline points="12,6 12,12 16,14" />
+                                                </svg>
+                                                @GetTimeAgo(item.CreatedAt)
+                                            </div>
+                                        </div>
+                                        <div class="item-footer">
+                                            <span class="item-seller">By @item.SellerName</span>
+                                            <div class="liked-item-actions">
+                                                <button class="btn btn-outline btn-sm btn-heart" @onclick="() => RemoveFromLikes(item.Id)">
+                                                    <svg class="icon filled" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                                    </svg>
+                                                    Remove
+                                                </button>
+                                                @if (item.Status != MarketplaceItemStatus.Sold && item.SellerId != currentUser.Id)
+                                                {
+                                                    <button class="btn btn-primary btn-sm">
+                                                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                                            <polyline points="22,6 12,13 2,6" />
+                                                        </svg>
+                                                        Contact Seller
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                        </div>
+                        <h3>No Liked Items Yet</h3>
+                        <p>Items you like from the marketplace will appear here. Start browsing to build your wishlist!</p>
+                    </div>
+                }
+            </div>
+
+            @if (showEditPopup)
+            {
+                <div class="modal-overlay" @onclick="CloseEditPopup">
+                    <div class="modal-container" @onclick:stopPropagation="true">
+                        <div class="modal-header">
+                            <h3>Edit Listing</h3>
+                            <button class="modal-close-btn" @onclick="CloseEditPopup">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+                            @if (!string.IsNullOrEmpty(listingErrorMessage))
+                            {
+                                <div class="alert alert-error">
+                                    @listingErrorMessage
+                                </div>
+                            }
+
+                            <div class="edit-listing-form">
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input type="text" @bind="editingListing.Title" @bind:event="oninput"
+                                           class="@(listingValidationErrors.ContainsKey("Title") ? "error" : "")" />
+                                    @if (listingValidationErrors.ContainsKey("Title"))
+                                    {
+                                        <span class="error-text">@listingValidationErrors["Title"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea @bind="editingListing.Description" @bind:event="oninput"
+                                              class="@(listingValidationErrors.ContainsKey("Description") ? "error" : "")"
+                                              rows="4"></textarea>
+                                    @if (listingValidationErrors.ContainsKey("Description"))
+                                    {
+                                        <span class="error-text">@listingValidationErrors["Description"]</span>
+                                    }
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Price (₱)</label>
+                                        <input type="number" @bind="editingListing.Price" @bind:event="oninput"
+                                               class="@(listingValidationErrors.ContainsKey("Price") ? "error" : "")"
+                                               step="0.01" min="0.01" />
+                                        @if (listingValidationErrors.ContainsKey("Price"))
+                                        {
+                                            <span class="error-text">@listingValidationErrors["Price"]</span>
+                                        }
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Condition</label>
+                                        <select @bind="editingListing.Condition">
+                                            @foreach (ItemCondition condition in Enum.GetValues<ItemCondition>())
+                                            {
+                                                <option value="@condition">@condition</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Category</label>
+                                        <select @bind="editingListing.Category">
+                                            @foreach (ItemCategory category in Enum.GetValues<ItemCategory>())
+                                            {
+                                                <option value="@category">@GetCategoryDisplayName(category)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Meetup Preference</label>
+                                        <select @bind="editingListing.MeetupPreference">
+                                            @foreach (MeetupPreference pref in Enum.GetValues<MeetupPreference>())
+                                            {
+                                                <option value="@pref">@GetMeetupPreferenceName(pref)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Image URL (optional)</label>
+                                    <input type="url" @bind="editingListing.ImageUrl" @bind:event="oninput" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-outline" @onclick="CloseEditPopup">Cancel</button>
+                            <button class="btn btn-primary" @onclick="SaveListingEdit" disabled="@isEditingListing">
+                                @if (isEditingListing)
+                                {
+                                    <span class="spinner"></span>
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polyline points="20,6 9,17 4,12" />
+                                    </svg>
+                                    <span>Save Changes</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
         }
         else
         {
@@ -279,10 +646,32 @@
 @code {
     private string activeTab = "info";
     private CurrentUserDto? currentUser;
+    private CurrentUserDto editUser = new();
+    private CurrentUserDto originalUser = new();
     private List<MarketplaceItemDto> userListings = new();
     private List<MarketplaceItemDto> activeListings = new();
     private List<MarketplaceItemDto> soldListings = new();
+    private List<MarketplaceItemDto> likedItems = new(); // NEW: Liked items list
     private int soldItemsCount = 0;
+    private int availableLikedItems = 0; // NEW: Count of available liked items
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private Dictionary<string, string> validationErrors = new();
+
+    // Popup edit variables
+    private bool showEditPopup = false;
+    private UpdateMarketplaceItemDto editingListing = new();
+    private UpdateMarketplaceItemDto originalListing = new();
+    private bool isEditingListing = false;
+    private string? listingErrorMessage;
+    private string? listingSuccessMessage;
+    private Dictionary<string, string> listingValidationErrors = new();
+
+    // NEW: Liked items variables
+    private string? likedErrorMessage;
+    private string? likedSuccessMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -290,11 +679,10 @@
         {
             await LoadUserProfile();
             await LoadUserListings();
-            StateHasChanged(); 
+            await LoadUserLikedItems(); // NEW: Load liked items
+            StateHasChanged();
         }
     }
-    private string? errorMessage;
-
 
     private async Task LoadUserProfile()
     {
@@ -306,7 +694,6 @@
                 currentUser = await UserService.GetUserByIdAsync(userId);
             }
 
-            // Fallback to sessionStorage if API call fails
             if (currentUser == null)
             {
                 var fullName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "fullName");
@@ -351,28 +738,15 @@
                     activeListings = userListings.Where(listing =>
                     {
                         var numericStatus = Convert.ToInt32(listing.Status);
-
-                        // Handle both the correct enum values and legacy 0 values
-                        return numericStatus == (int)MarketplaceItemStatus.Active ||  // 1
-                               numericStatus == 0;  // Legacy active status
+                        return numericStatus == (int)MarketplaceItemStatus.Active ||
+                               numericStatus == 0;
                     }).ToList();
 
                     soldListings = userListings.Where(listing =>
                     {
                         var numericStatus = Convert.ToInt32(listing.Status);
-                        return numericStatus == (int)MarketplaceItemStatus.Sold;  // 2
+                        return numericStatus == (int)MarketplaceItemStatus.Sold;
                     }).ToList();
-
-                    // Debug output
-                    Console.WriteLine($"DEBUG: Total listings: {userListings.Count}");
-                    Console.WriteLine($"DEBUG: Active listings: {activeListings.Count}");
-                    Console.WriteLine($"DEBUG: Sold listings: {soldListings.Count}");
-
-                    foreach (var item in userListings)
-                    {
-                        var status = Convert.ToInt32(item.Status);
-                        Console.WriteLine($"DEBUG: {item.Title} - Status: {status}");
-                    }
                 }
                 else
                 {
@@ -390,10 +764,344 @@
         }
     }
 
+    // NEW: Load user's liked items
+    private async Task LoadUserLikedItems()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                likedItems = await MarketplaceService.GetUserWishlistAsync(currentUser.Id);
+                availableLikedItems = likedItems.Count(item => item.Status == MarketplaceItemStatus.Active);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading liked items: {ex.Message}");
+            likedErrorMessage = $"Error loading liked items: {ex.Message}";
+        }
+    }
+
+    // NEW: Remove item from likes
+    private async Task RemoveFromLikes(int itemId)
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                var success = await MarketplaceService.RemoveFromWishlistAsync(itemId, currentUser.Id);
+
+                if (success)
+                {
+                    // Remove from local list
+                    likedItems = likedItems.Where(item => item.Id != itemId).ToList();
+                    availableLikedItems = likedItems.Count(item => item.Status == MarketplaceItemStatus.Active);
+
+                    likedSuccessMessage = "Item removed from your liked items!";
+
+                    // Clear success message after 3 seconds
+                    _ = Task.Delay(3000).ContinueWith(_ =>
+                    {
+                        likedSuccessMessage = null;
+                        InvokeAsync(StateHasChanged);
+                    });
+                }
+                else
+                {
+                    likedErrorMessage = "Failed to remove item from liked items. Please try again.";
+                }
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing from likes: {ex.Message}");
+            likedErrorMessage = $"Error removing from likes: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
     private void ShowProfileTab(string tabName)
     {
         activeTab = tabName;
+
+        // Load liked items when switching to liked tab
+        if (tabName == "liked")
+        {
+            _ = Task.Run(async () =>
+            {
+                await LoadUserLikedItems();
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+
         StateHasChanged();
+    }
+
+    private void EnableEditMode()
+    {
+        isEditMode = true;
+        errorMessage = null;
+        successMessage = null;
+        validationErrors.Clear();
+
+        // Create copies for editing
+        originalUser = CloneUser(currentUser!);
+        editUser = CloneUser(currentUser!);
+
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        isEditMode = false;
+        errorMessage = null;
+        successMessage = null;
+        validationErrors.Clear();
+
+        // Restore original values
+        editUser = new CurrentUserDto();
+
+        StateHasChanged();
+    }
+
+    private async Task SaveProfile()
+    {
+        if (!ValidateInput())
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var success = await UserService.UpdateUserProfileAsync(editUser);
+
+            if (success)
+            {
+                currentUser!.FullName = editUser.FullName;
+                currentUser.StudentNumber = editUser.StudentNumber;
+                currentUser.Email = editUser.Email;
+                currentUser.ContactNumber = editUser.ContactNumber;
+                currentUser.Program = editUser.Program;
+                currentUser.YearLevel = editUser.YearLevel;
+                currentUser.UpdatedAt = DateTime.UtcNow;
+
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "fullName", currentUser.FullName);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "email", currentUser.Email);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "program", currentUser.Program);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "yearLevel", currentUser.YearLevel);
+
+                isEditMode = false;
+                successMessage = "Profile updated successfully!";
+
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    successMessage = null;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                errorMessage = "Failed to update profile. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating profile: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowEditPopup(MarketplaceItemDto listing)
+    {
+        showEditPopup = true;
+        listingErrorMessage = null;
+        listingSuccessMessage = null;
+        listingValidationErrors.Clear();
+
+        editingListing = new UpdateMarketplaceItemDto
+        {
+            Id = listing.Id,
+            Title = listing.Title,
+            Description = listing.Description,
+            Price = listing.Price,
+            Category = listing.Category,
+            Condition = listing.Condition,
+            MeetupPreference = listing.MeetupPreference,
+            Location = currentUser?.CampusLocation ?? CampusLocation.MainCampus,
+            ImageUrl = listing.ImageUrl
+        };
+
+        originalListing = new UpdateMarketplaceItemDto
+        {
+            Id = listing.Id,
+            Title = listing.Title,
+            Description = listing.Description,
+            Price = listing.Price,
+            Category = listing.Category,
+            Condition = listing.Condition,
+            MeetupPreference = listing.MeetupPreference,
+            Location = currentUser?.CampusLocation ?? CampusLocation.MainCampus,
+            ImageUrl = listing.ImageUrl
+        };
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseEditPopup()
+    {
+        showEditPopup = false;
+        listingErrorMessage = null;
+        listingSuccessMessage = null;
+        listingValidationErrors.Clear();
+        editingListing = new UpdateMarketplaceItemDto();
+        originalListing = new UpdateMarketplaceItemDto();
+
+        StateHasChanged();
+    }
+
+    private async Task SaveListingEdit()
+    {
+        if (!ValidateListingInput())
+            return;
+
+        isEditingListing = true;
+        listingErrorMessage = null;
+        listingSuccessMessage = null;
+
+        try
+        {
+            var updatedListing = await MarketplaceService.UpdateItemAsync(editingListing);
+
+            if (updatedListing != null)
+            {
+                // Update the listing in our local lists
+                var listingToUpdate = activeListings.FirstOrDefault(l => l.Id == editingListing.Id);
+                if (listingToUpdate != null)
+                {
+                    listingToUpdate.Title = editingListing.Title;
+                    listingToUpdate.Description = editingListing.Description;
+                    listingToUpdate.Price = editingListing.Price;
+                    listingToUpdate.Category = editingListing.Category;
+                    listingToUpdate.Condition = editingListing.Condition;
+                    listingToUpdate.MeetupPreference = editingListing.MeetupPreference;
+                    listingToUpdate.ImageUrl = editingListing.ImageUrl;
+                    listingToUpdate.UpdatedAt = DateTime.UtcNow;
+                }
+
+                // Close popup and show success message
+                showEditPopup = false;
+                listingSuccessMessage = "Listing updated successfully!";
+
+                // Clear success message after 3 seconds
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    listingSuccessMessage = null;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                listingErrorMessage = "Failed to update listing. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            listingErrorMessage = $"Error updating listing: {ex.Message}";
+        }
+        finally
+        {
+            isEditingListing = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateListingInput()
+    {
+        listingValidationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(editingListing.Title))
+            listingValidationErrors["Title"] = "Title is required";
+        else if (editingListing.Title.Length > 100)
+            listingValidationErrors["Title"] = "Title cannot exceed 100 characters";
+
+        if (string.IsNullOrWhiteSpace(editingListing.Description))
+            listingValidationErrors["Description"] = "Description is required";
+        else if (editingListing.Description.Length > 1000)
+            listingValidationErrors["Description"] = "Description cannot exceed 1000 characters";
+
+        if (editingListing.Price <= 0)
+            listingValidationErrors["Price"] = "Price must be greater than 0";
+        else if (editingListing.Price > 999999.99m)
+            listingValidationErrors["Price"] = "Price cannot exceed ₱999,999.99";
+
+        return !listingValidationErrors.Any();
+    }
+
+    private bool ValidateInput()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(editUser.FullName))
+            validationErrors["FullName"] = "Full name is required";
+
+        if (string.IsNullOrWhiteSpace(editUser.StudentNumber))
+            validationErrors["StudentNumber"] = "Student number is required";
+
+        if (string.IsNullOrWhiteSpace(editUser.Email))
+            validationErrors["Email"] = "Email is required";
+        else if (!IsValidEmail(editUser.Email))
+            validationErrors["Email"] = "Please enter a valid email address";
+
+        if (string.IsNullOrWhiteSpace(editUser.Program))
+            validationErrors["Program"] = "Program is required";
+
+        if (string.IsNullOrWhiteSpace(editUser.YearLevel))
+            validationErrors["YearLevel"] = "Year level is required";
+
+        return !validationErrors.Any();
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private CurrentUserDto CloneUser(CurrentUserDto user)
+    {
+        return new CurrentUserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = user.FullName,
+            StudentNumber = user.StudentNumber,
+            Email = user.Email,
+            ContactNumber = user.ContactNumber,
+            Program = user.Program,
+            YearLevel = user.YearLevel,
+            ProgramID = user.ProgramID,
+            YearLevelId = user.YearLevelId,
+            Role = user.Role,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt,
+            ProfilePictureUrl = user.ProfilePictureUrl,
+            CampusLocation = user.CampusLocation
+        };
     }
 
     private async Task MarkAsSold(int listingId)
@@ -452,13 +1160,14 @@
         _ => "Not Specified"
     };
 
-    private void EditProfile()
+    private string GetCategoryDisplayName(ItemCategory category) => category switch
     {
-        Console.WriteLine("Edit profile clicked");
-    }
-
-    private void EditListing(int listingId)
-    {
-        Console.WriteLine($"Edit listing {listingId} clicked");
-    }
+        ItemCategory.Electronics => "Electronics",
+        ItemCategory.Books => "Books",
+        ItemCategory.Clothing => "Clothing",
+        ItemCategory.Furniture => "Furniture",
+        ItemCategory.Sports => "Sports & Recreation",
+        ItemCategory.Other => "Other",
+        _ => category.ToString()
+    };
 }

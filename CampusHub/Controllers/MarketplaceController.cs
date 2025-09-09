@@ -18,11 +18,6 @@ namespace CampusHub.Presentation.Controllers
             _userService = userService;
         }
 
-        /// <summary>
-        /// Get all marketplace items with optional user context for like status
-        /// </summary>
-        /// <param name="userId">Optional user ID to check like status</param>
-        /// <returns>List of marketplace items</returns>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetAllItems([FromQuery] int? userId = null)
         {
@@ -37,12 +32,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Get a specific marketplace item by ID
-        /// </summary>
-        /// <param name="id">Item ID</param>
-        /// <param name="userId">Optional user ID to check like status</param>
-        /// <returns>Marketplace item details</returns>
         [HttpGet("{id}")]
         public async Task<ActionResult<MarketplaceItemDto>> GetItemById(int id, [FromQuery] int? userId = null)
         {
@@ -63,11 +52,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Create a new marketplace item
-        /// </summary>
-        /// <param name="createItemDto">Item creation data</param>
-        /// <returns>Created marketplace item</returns>
         [HttpPost]
         public async Task<ActionResult<MarketplaceItemDto>> CreateItem([FromBody] CreateMarketplaceItemDto createItemDto)
         {
@@ -87,12 +71,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Update an existing marketplace item
-        /// </summary>
-        /// <param name="id">Item ID</param>
-        /// <param name="updateItemDto">Item update data</param>
-        /// <returns>Updated marketplace item</returns>
         [HttpPut("{id}")]
         public async Task<ActionResult<MarketplaceItemDto>> UpdateItem(int id, [FromBody] UpdateMarketplaceItemDto updateItemDto)
         {
@@ -121,12 +99,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete a marketplace item
-        /// </summary>
-        /// <param name="id">Item ID</param>
-        /// <param name="userId">User ID of the item owner</param>
-        /// <returns>Success status</returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteItem(int id, [FromQuery] int userId)
         {
@@ -147,12 +119,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Toggle like status for a marketplace item
-        /// </summary>
-        /// <param name="id">Item ID</param>
-        /// <param name="toggleLikeDto">Like toggle data</param>
-        /// <returns>Success status</returns>
         [HttpPost("{id}/toggle-like")]
         public async Task<IActionResult> ToggleLike(int id, [FromBody] ToggleLikeDto toggleLikeDto)
         {
@@ -183,12 +149,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Get marketplace items by campus location
-        /// </summary>
-        /// <param name="location">Campus location</param>
-        /// <param name="userId">Optional user ID to check like status</param>
-        /// <returns>Filtered marketplace items</returns>
         [HttpGet("location/{location}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsByLocation(CampusLocation location, [FromQuery] int? userId = null)
         {
@@ -203,12 +163,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Get marketplace items by seller
-        /// </summary>
-        /// <param name="sellerId">Seller user ID</param>
-        /// <param name="userId">Optional current user ID to check like status</param>
-        /// <returns>Seller's marketplace items</returns>
         [HttpGet("seller/{sellerId}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsBySeller(int sellerId, [FromQuery] int? userId = null)
         {
@@ -223,12 +177,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Get marketplace items by category
-        /// </summary>
-        /// <param name="category">Item category</param>
-        /// <param name="userId">Optional user ID to check like status</param>
-        /// <returns>Filtered marketplace items by category</returns>
         [HttpGet("category/{category}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsByCategory(ItemCategory category, [FromQuery] int? userId = null)
         {
@@ -244,12 +192,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Search marketplace items by title or description
-        /// </summary>
-        /// <param name="searchTerm">Search term</param>
-        /// <param name="userId">Optional user ID to check like status</param>
-        /// <returns>Search results</returns>
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> SearchItems([FromQuery] string searchTerm, [FromQuery] int? userId = null)
         {
@@ -271,6 +213,71 @@ namespace CampusHub.Presentation.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while searching marketplace items", error = ex.Message });
+            }
+        }
+
+        // NEW WISHLIST ENDPOINTS
+        /// <summary>
+        /// Get user's wishlist/liked items
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>User's wishlist items</returns>
+        [HttpGet("wishlist/{userId}")]
+        public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetUserWishlist(int userId)
+        {
+            try
+            {
+                var wishlistItems = await _marketplaceService.GetUserWishlistAsync(userId);
+                return Ok(wishlistItems);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving user wishlist", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get user's wishlist count
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>Count of wishlist items</returns>
+        [HttpGet("wishlist/{userId}/count")]
+        public async Task<ActionResult<int>> GetUserWishlistCount(int userId)
+        {
+            try
+            {
+                var count = await _marketplaceService.GetUserWishlistCountAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving wishlist count", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Remove item from user's wishlist
+        /// </summary>
+        /// <param name="itemId">Item ID</param>
+        /// <param name="userId">User ID</param>
+        /// <returns>Success status</returns>
+        [HttpDelete("wishlist/{itemId}/user/{userId}")]
+        public async Task<IActionResult> RemoveFromWishlist(int itemId, int userId)
+        {
+            try
+            {
+                var success = await _marketplaceService.RemoveFromWishlistAsync(itemId, userId);
+
+                if (!success)
+                {
+                    return NotFound(new { message = "Item not found in wishlist" });
+                }
+
+                return Ok(new { message = "Item removed from wishlist successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while removing item from wishlist", error = ex.Message });
             }
         }
     }

@@ -63,5 +63,25 @@ namespace CampusHub.Infrastructure.Repositories
                 .OrderBy(u => u.FullName)
                 .ToListAsync();
         }
+        public async Task<bool> UpdateAsync(User user)
+        {
+            try
+            {
+                user.UpdatedAt = DateTime.UtcNow;
+
+                _context.Users.Update(user);
+
+                var result = await _context.SaveChangesAsync();
+
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception if you have logging configured
+                // _logger?.LogError(ex, "Error updating user with ID {UserId}", user.UserID);
+                Console.WriteLine($"Error updating user: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

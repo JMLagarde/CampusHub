@@ -18,5 +18,8 @@ namespace CampusHub.Application.Interfaces
         Task ToggleLikeAsync(ToggleLikeDto toggleDto);
         Task<List<MarketplaceItemDto>> GetUserListingsAsync(int userId);
         Task UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status);
+        Task<List<MarketplaceItemDto>> GetUserWishlistAsync(int userId);
+        Task<int> GetUserWishlistCountAsync(int userId);
+        Task<bool> RemoveFromWishlistAsync(int itemId, int userId);
     }
 }
