@@ -165,7 +165,6 @@
     {
         try
         {
-            // Store user data in sessionStorage
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userId", loginResponse.UserId.ToString());
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "username", loginResponse.Username);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "fullName", loginResponse.FullName);

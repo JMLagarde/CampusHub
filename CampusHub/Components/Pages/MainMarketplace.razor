@@ -216,6 +216,11 @@
                                     <strong>Seller:</strong>
                                     <span>@SelectedProduct.SellerName</span>
                                 </div>
+                                <div class="meta-item">
+                                    <strong>Contact Number:</strong>
+                                    <span>@SelectedProduct.ContactNumber</span>
+                                </div>
+
                             </div>
                         </div>
 
@@ -232,13 +237,6 @@
                                 {
                                     <span>Like (@SelectedProduct.LikesCount)</span>
                                 }
-                            </button>
-                            <button class="btn btn-primary">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                                    <polyline points="22,6 12,13 2,6" />
-                                </svg>
-                                Contact Seller
                             </button>
                         </div>
                     </div>
@@ -344,6 +342,12 @@
                         <InputText id="image" @bind-Value="NewItem.ImageUrl" placeholder="https://example.com/image.jpg" />
                         <ValidationMessage For="@(() => NewItem.ImageUrl)" />
                     </div>
+                    <div class="form-group">
+                        <label for="contact">Contact Number</label>
+                        <InputText id="contact" @bind-Value="NewItem.ContactNumber"
+                                   placeholder="e.g., 0917-123-4567" />
+                        <ValidationMessage For="@(() => NewItem.ContactNumber)" />
+                    </div>
 
                     <div class="dialog-actions">
                         <button type="button" class="btn btn-outline" @onclick="ClosePostDialog" disabled="@IsPosting">Cancel</button>
@@ -429,12 +433,12 @@
             var queryString = currentUserId.HasValue ? $"?userId={currentUserId}" : "";
 
             var response = await HttpClient.GetAsync($"/api/marketplace{queryString}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 var items = JsonSerializer.Deserialize<IEnumerable<MarketplaceItemDto>>(json, JsonOptions);
-                
+
                 if (items != null)
                 {
                     AllMarketplaceItems = items.ToList();
@@ -553,7 +557,7 @@
             {
                 ShowMessage("Item posted successfully!", "success");
                 ClosePostDialog();
-                await LoadMarketplaceItems(); 
+                await LoadMarketplaceItems();
             }
             else
             {
@@ -615,12 +619,12 @@
                 // Load all items via API
                 var queryString = currentUserId.HasValue ? $"?userId={currentUserId}" : "";
                 var response = await HttpClient.GetAsync($"/api/marketplace{queryString}");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     var items = JsonSerializer.Deserialize<IEnumerable<MarketplaceItemDto>>(json, JsonOptions);
-                    
+
                     if (items != null)
                     {
                         MarketplaceItems = items.ToList();

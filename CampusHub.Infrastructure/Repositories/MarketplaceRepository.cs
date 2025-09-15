@@ -2,11 +2,6 @@
 using CampusHub.Domain.Entities;
 using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CampusHub.Infrastructure.Repositories
 {
@@ -52,14 +47,14 @@ namespace CampusHub.Infrastructure.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var item = await GetByIdAsync(id);
+            var item = await _context.MarketplaceItems.FindAsync(id);
             if (item == null) return false;
 
-            item.IsActive = false;
-            item.UpdatedDate = DateTime.UtcNow;
+            _context.MarketplaceItems.Remove(item);
             await _context.SaveChangesAsync();
             return true;
         }
+
 
         public async Task<bool> ToggleLikeAsync(int itemId, int userId)
         {

@@ -35,6 +35,9 @@ namespace CampusHub.Application.DTO
         public string SellerName { get; set; } = string.Empty;
         public ItemCategory Category { get; set; }
         public MeetupPreference MeetupPreference { get; set; }
+        [Phone]
+        [StringLength(20)]
+        public string? ContactNumber { get; set; }
 
     }
 }

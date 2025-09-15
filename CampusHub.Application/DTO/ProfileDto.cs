@@ -1,6 +1,6 @@
 ﻿namespace CampusHub.Application.DTO
 {
-    public class ProfieDto
+    public class ProfileDto
     {
         public string Id { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;

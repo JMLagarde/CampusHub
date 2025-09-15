@@ -322,6 +322,13 @@
                                                     </svg>
                                                     Mark Sold
                                                 </button>
+                                                <button class="btn btn-outline btn-sm btn-danger" @onclick="() => DeleteListing(listing.Id)">
+                                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <polyline points="3 6 5 6 21 6" />
+                                                        <path d="M19 6L17 20H7L5 6m5-4h4a1 1 0 0 1 1 1v3H9V3a1 1 0 0 1 1-1z" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -966,6 +973,7 @@
 
         StateHasChanged();
     }
+    
 
     private async Task SaveListingEdit()
     {
@@ -1170,4 +1178,38 @@
         ItemCategory.Other => "Other",
         _ => category.ToString()
     };
+    private async Task DeleteListing(int listingId)
+    {
+        if (currentUser == null)
+        {
+            listingErrorMessage = "You must be logged in to delete a listing.";
+            return;
+        }
+
+        try
+        {
+            var success = await MarketplaceService.DeleteItemAsync(listingId, currentUser.Id);
+
+            if (success)
+            {
+                listingSuccessMessage = "Listing deleted successfully!";
+                // Remove from activeListings
+                activeListings = activeListings.Where(l => l.Id != listingId).ToList();
+
+                // Optionally also remove from soldListings or userListings
+                soldListings = soldListings.Where(l => l.Id != listingId).ToList();
+                userListings = userListings.Where(l => l.Id != listingId).ToList();
+
+                StateHasChanged();
+            }
+            else
+            {
+                listingErrorMessage = "Failed to delete listing. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            listingErrorMessage = $"Error deleting listing: {ex.Message}";
+        }
+    }
 }

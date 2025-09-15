@@ -42,17 +42,6 @@
                 </NavLink>
             </div>
 
-            <!-- Search Bar -->
-            <div class="search-container">
-                <div class="search-input-wrapper">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                    </svg>
-                    <input type="text" class="search-input" placeholder="@SearchPlaceholder" @bind="SearchQuery" @oninput="OnSearchInput">
-                </div>
-            </div>
-
             <!-- User Actions -->
             <div class="header-actions">
                 <div class="user-menu">
@@ -110,24 +99,11 @@
 
     // UI State
     public bool IsUserMenuOpen { get; set; } = false;
-    public string SearchQuery { get; set; } = string.Empty;
-    public string SearchPlaceholder => GetSearchPlaceholder();
 
     protected override async Task OnInitializedAsync()
     {
         // Load user data from your services
         await LoadUserData();
-    }
-
-    private string GetSearchPlaceholder()
-    {
-        var currentPath = Navigation.Uri;
-        if (currentPath.Contains("/events"))
-            return "Search events...";
-        else if (currentPath.Contains("/marketplace"))
-            return "Search marketplace...";
-        else
-            return "Search...";
     }
 
     private string GetUserInitials()
@@ -165,11 +141,6 @@
     {
         CloseUserMenu();
         Navigation.NavigateTo("/login");
-    }
-
-    private async Task OnSearchInput(ChangeEventArgs e)
-    {
-        SearchQuery = e.Value?.ToString() ?? string.Empty;
     }
 
     private async Task LoadUserData()

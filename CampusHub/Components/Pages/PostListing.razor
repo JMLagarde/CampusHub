@@ -102,6 +102,22 @@
                         </div>
                     </div>
 
+                    <!-- Contact Information -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Contact Information</h3>
+
+                        <div class="form-group">
+                            <label for="contactNumber">Contact Number</label>
+                            <InputText id="contactNumber"
+                                       @bind-Value="NewItem.ContactNumber"
+                                       placeholder="e.g., 09123456789, +639123456789" />
+                            <div class="form-help">
+                                Provide a valid contact number for buyers to reach you
+                            </div>
+                            <ValidationMessage For="@(() => NewItem.ContactNumber)" />
+                        </div>
+                    </div>
+
                     <!-- Location & Image -->
                     <div class="form-section">
                         <h3 class="form-section-title">Location & Images</h3>
@@ -236,6 +252,17 @@
                                 <p>Select campus locations that are easy for buyers to reach</p>
                             </div>
                         </div>
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                </svg>
+                            </div>
+                            <div class="tip-content">
+                                <strong>Provide valid contact info</strong>
+                                <p>Include an active phone number for quick buyer communication</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -243,7 +270,6 @@
     </div>
 </div>
 
-<!-- Success/Error Messages -->
 @if (!string.IsNullOrEmpty(Message))
 {
     <div class="toast toast-@MessageType">
@@ -273,19 +299,18 @@
 }
 
 @code {
-    // Properties
     private CreateMarketplaceItemDto NewItem { get; set; } = new();
     private bool IsPosting { get; set; } = false;
     private string Message { get; set; } = string.Empty;
-    private string MessageType { get; set; } = "success"; 
-    private int? CurrentUserId { get; set; } = 1; 
+    private string MessageType { get; set; } = "success";
+    private int? CurrentUserId { get; set; } = 1;
 
     protected override void OnInitialized()
     {
         NewItem = new CreateMarketplaceItemDto
         {
             SellerId = CurrentUserId ?? 1,
-            SellerName = "Current User" 
+            SellerName = "Current User"
         };
     }
 
@@ -295,7 +320,7 @@
         try
         {
             NewItem.SellerId = CurrentUserId ?? 1;
-            NewItem.SellerName = "Current User"; 
+            NewItem.SellerName = "Current User";
 
             var createdItem = await MarketplaceService.CreateItemAsync(NewItem);
 
