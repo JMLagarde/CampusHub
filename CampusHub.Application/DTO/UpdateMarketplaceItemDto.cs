@@ -37,6 +37,10 @@ namespace CampusHub.Application.DTO
 
         [Url(ErrorMessage = "Please enter a valid URL")]
         public string? ImageUrl { get; set; }
+        [Phone]
+        [StringLength(20)]
+        public string? ContactNumber { get; set; }
+
     }
 }
 

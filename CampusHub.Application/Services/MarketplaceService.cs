@@ -66,6 +66,7 @@ namespace CampusHub.Application.Services
                 ImageUrl = dto.ImageUrl,
                 SellerId = dto.SellerId,
                 SellerName = dto.SellerName,
+                ContactNumber = dto.ContactNumber, // ← ADDED THIS!
                 CreatedDate = DateTime.UtcNow,
                 Status = MarketplaceItemStatus.Active
             };
@@ -91,6 +92,7 @@ namespace CampusHub.Application.Services
             existingItem.MeetupPreference = dto.MeetupPreference;
             existingItem.Location = dto.Location;
             existingItem.ImageUrl = dto.ImageUrl;
+            existingItem.ContactNumber = dto.ContactNumber; // ← ADDED THIS!
             existingItem.UpdatedDate = DateTime.UtcNow;
 
             var updatedItem = await _marketplaceRepository.UpdateAsync(existingItem);
@@ -222,6 +224,7 @@ namespace CampusHub.Application.Services
                 ImageUrl = item.ImageUrl,
                 SellerName = item.SellerName,
                 SellerId = item.SellerId,
+                ContactNumber = item.ContactNumber, // ← ADDED THIS!
                 LikesCount = item.LikesCount,
                 CreatedDate = item.CreatedDate,
                 Status = item.Status,

@@ -23,6 +23,8 @@ namespace CampusHub.Domain.Entities
         public string? ImageUrl { get; set; }
         public string SellerName { get; set; } = string.Empty;
         public int SellerId { get; set; }
+        public string? ContactNumber { get; set; }
+
         public int LikesCount { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
