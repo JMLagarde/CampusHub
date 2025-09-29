@@ -216,12 +216,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        // NEW WISHLIST ENDPOINTS
-        /// <summary>
-        /// Get user's wishlist/liked items
-        /// </summary>
-        /// <param name="userId">User ID</param>
-        /// <returns>User's wishlist items</returns>
         [HttpGet("wishlist/{userId}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetUserWishlist(int userId)
         {
@@ -278,6 +272,79 @@ namespace CampusHub.Presentation.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while removing item from wishlist", error = ex.Message });
+            }
+        }
+        [HttpPost("{itemId}/report")]
+        public async Task<IActionResult> ReportItem(int itemId, [FromBody] CreateReportDto reportDto)
+        {
+            try
+            {
+                reportDto.MarketplaceItemId = itemId;
+                var success = await _marketplaceService.ReportItemAsync(reportDto);
+
+                if (success)
+                {
+                    return Ok(new { message = "Item reported successfully" });
+                }
+
+                return BadRequest(new { message = "Failed to report item" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        // Admin endpoints for managing reports
+        [HttpGet("reports")]
+        public async Task<ActionResult<IEnumerable<ReportDto>>> GetAllReports()
+        {
+            try
+            {
+                var reports = await _marketplaceService.GetAllReportsAsync();
+                return Ok(reports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("{itemId}/reports")]
+        public async Task<ActionResult<IEnumerable<ReportDto>>> GetReportsByItem(int itemId)
+        {
+            try
+            {
+                var reports = await _marketplaceService.GetReportsByItemAsync(itemId);
+                return Ok(reports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("reports/{reportId}/status")]
+        public async Task<IActionResult> UpdateReportStatus(int reportId, [FromBody] UpdateReportStatusDto dto)
+        {
+            try
+            {
+                var success = await _marketplaceService.UpdateReportStatusAsync(
+                    reportId,
+                    dto.Status,
+                    dto.AdminUserId,
+                    dto.AdminNotes);
+
+                if (success)
+                {
+                    return Ok(new { message = "Report status updated successfully" });
+                }
+
+                return NotFound(new { message = "Report not found" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }

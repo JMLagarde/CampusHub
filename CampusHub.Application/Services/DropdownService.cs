@@ -1,7 +1,5 @@
 ﻿using CampusHub.Application.DTO;
-using CampusHub.Application.DTOs;
 using CampusHub.Application.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace CampusHub.Application.Services
 {

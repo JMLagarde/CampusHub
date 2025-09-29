@@ -34,7 +34,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<MarketplaceItem> CreateAsync(MarketplaceItem item)
         {
             _context.MarketplaceItems.Add(item);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); 
             return item;
         }
 
@@ -162,6 +162,80 @@ namespace CampusHub.Infrastructure.Repositories
             }
 
             return false;
+        }
+        public async Task<bool> ReportItemAsync(int itemId, int reporterId, string reason, string? description)
+        {
+            try
+            {
+                var report = new Report
+                {
+                    MarketplaceItemId = itemId, //here
+                    ReporterUserID = reporterId, //here
+                    Reason = reason,
+                    Description = description,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = ReportStatus.Pending
+                };
+
+                await _context.Reports.AddAsync(report);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<Report>> GetReportsAsync()
+        {
+            return await _context.Reports
+                .Include(r => r.MarketplaceItem) //here
+                .Include(r => r.Reporter)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Report>> GetReportsByItemAsync(int itemId)
+        {
+            return await _context.Reports
+                .Include(r => r.Reporter) //here
+                .Where(r => r.MarketplaceItemId == itemId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Report?> GetReportByIdAsync(int reportId)
+        {
+            return await _context.Reports
+                .Include(r => r.MarketplaceItem) //here
+                .Include(r => r.Reporter)
+                .FirstOrDefaultAsync(r => r.Id == reportId);
+        }
+
+        public async Task<bool> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null)
+        {
+            try
+            {
+                var report = await _context.Reports.FindAsync(reportId);
+                if (report == null) return false;
+
+                report.Status = status;
+                report.ResolvedAt = DateTime.UtcNow; //here
+                report.ResolvedByUserId = adminUserId; //here
+                report.AdminNotes = adminNotes;
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

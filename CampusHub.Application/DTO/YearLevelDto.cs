@@ -1,4 +1,4 @@
-﻿namespace CampusHub.Application.DTOs
+﻿namespace CampusHub.Application.DTO
 {
     public class YearLevelDto
     {

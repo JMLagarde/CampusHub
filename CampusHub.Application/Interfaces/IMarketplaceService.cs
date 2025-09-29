@@ -21,5 +21,13 @@ namespace CampusHub.Application.Interfaces
         Task<List<MarketplaceItemDto>> GetUserWishlistAsync(int userId);
         Task<int> GetUserWishlistCountAsync(int userId);
         Task<bool> RemoveFromWishlistAsync(int itemId, int userId);
+        Task<bool> ReportItemAsync(CreateReportDto reportDto);
+        Task<IEnumerable<ReportDto>> GetAllReportsAsync();
+        Task<IEnumerable<ReportDto>> GetReportsByItemAsync(int itemId);
+        Task<bool> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null);
+        Task MarkItemAvailableAsync(ItemStatusOperationDto dto);
+        Task MarkItemSoldAsync(ItemStatusOperationDto dto);
+        Task<UserStatsDto> GetUserStatsAsync(int userId);
+
     }
 }
