@@ -77,11 +77,13 @@ namespace CampusHub.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                // Log the exception if you have logging configured
-                // _logger?.LogError(ex, "Error updating user with ID {UserId}", user.UserID);
                 Console.WriteLine($"Error updating user: {ex.Message}");
                 return false;
             }
+        }
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

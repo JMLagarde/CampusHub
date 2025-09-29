@@ -15,6 +15,7 @@ namespace CampusHub.Application.DTO
         public string? Email { get; set; }
         public string SessionToken { get; set; } = string.Empty; 
         public bool IsSuccess { get; set; }
-        public string Message { get; set; } = string.Empty; 
+        public string Message { get; set; } = string.Empty;
+        public string? RedirectUrl { get; set; }
     }
 }

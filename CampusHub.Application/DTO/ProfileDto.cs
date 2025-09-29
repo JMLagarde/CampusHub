@@ -13,6 +13,6 @@
         public string Bio { get; set; } = string.Empty;
         public DateTime JoinDate { get; set; }
         public string ProfilePictureUrl { get; set; } = string.Empty;
-        public ProfileStatisticsDto Statistics { get; set; } = new();
+        public UserStatsDto Statistics { get; set; } = new();
     }
 }

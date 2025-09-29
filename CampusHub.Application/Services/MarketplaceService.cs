@@ -1,11 +1,7 @@
 ﻿using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
+using CampusHub.Application.Helpers;
 using CampusHub.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CampusHub.Application.Services
 {
@@ -17,6 +13,8 @@ namespace CampusHub.Application.Services
         {
             _marketplaceRepository = marketplaceRepository;
         }
+
+        #region Item CRUD Operations
 
         public async Task<IEnumerable<MarketplaceItemDto>> GetAllItemsAsync(int? currentUserId = null)
         {
@@ -39,6 +37,9 @@ namespace CampusHub.Application.Services
 
         public async Task<MarketplaceItemDto?> GetItemByIdAsync(int id, int? currentUserId = null)
         {
+            if (id <= 0)
+                throw new ArgumentException("Valid item ID is required");
+
             var item = await _marketplaceRepository.GetByIdAsync(id);
             if (item == null) return null;
 
@@ -54,6 +55,19 @@ namespace CampusHub.Application.Services
 
         public async Task<MarketplaceItemDto> CreateItemAsync(CreateMarketplaceItemDto dto)
         {
+            // Validate using ValidationHelper
+            var validation = ValidationHelper.ValidateCreateMarketplaceItem(dto);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+            }
+
+            // Business logic validations
+            if (dto.SellerId <= 0)
+            {
+                throw new ArgumentException("Valid seller ID is required");
+            }
+
             var item = new MarketplaceItem
             {
                 Title = dto.Title,
@@ -66,12 +80,14 @@ namespace CampusHub.Application.Services
                 ImageUrl = dto.ImageUrl,
                 SellerId = dto.SellerId,
                 SellerName = dto.SellerName,
-                ContactNumber = dto.ContactNumber, // ← ADDED THIS!
+                ContactNumber = dto.ContactNumber,
                 CreatedDate = DateTime.UtcNow,
                 Status = MarketplaceItemStatus.Active
             };
 
             var createdItem = await _marketplaceRepository.CreateAsync(item);
+            await _marketplaceRepository.SaveChangesAsync();
+
             var result = MapToDto(createdItem);
             result.TimeAgo = GetTimeAgo(createdItem.CreatedDate);
 
@@ -80,6 +96,14 @@ namespace CampusHub.Application.Services
 
         public async Task<MarketplaceItemDto> UpdateItemAsync(UpdateMarketplaceItemDto dto)
         {
+            // Validate using ValidationHelper
+            var validation = ValidationHelper.ValidateUpdateMarketplaceItem(dto);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+            }
+
+            // Business logic validations
             var existingItem = await _marketplaceRepository.GetByIdAsync(dto.Id);
             if (existingItem == null)
                 throw new ArgumentException("Item not found");
@@ -92,10 +116,12 @@ namespace CampusHub.Application.Services
             existingItem.MeetupPreference = dto.MeetupPreference;
             existingItem.Location = dto.Location;
             existingItem.ImageUrl = dto.ImageUrl;
-            existingItem.ContactNumber = dto.ContactNumber; // ← ADDED THIS!
+            existingItem.ContactNumber = dto.ContactNumber;
             existingItem.UpdatedDate = DateTime.UtcNow;
 
             var updatedItem = await _marketplaceRepository.UpdateAsync(existingItem);
+            await _marketplaceRepository.SaveChangesAsync();
+
             var result = MapToDto(updatedItem);
             result.TimeAgo = GetTimeAgo(updatedItem.CreatedDate);
 
@@ -104,17 +130,22 @@ namespace CampusHub.Application.Services
 
         public async Task<bool> DeleteItemAsync(int id, int userId)
         {
+            if (id <= 0 || userId <= 0)
+                throw new ArgumentException("Valid ID and User ID are required");
+
             var item = await _marketplaceRepository.GetByIdAsync(id);
             if (item == null || item.SellerId != userId)
                 return false;
 
-            return await _marketplaceRepository.DeleteAsync(id);
+            var result = await _marketplaceRepository.DeleteAsync(id);
+            await _marketplaceRepository.SaveChangesAsync();
+
+            return result;
         }
 
-        public async Task<bool> ToggleLikeAsync(int itemId, int userId)
-        {
-            return await _marketplaceRepository.ToggleLikeAsync(itemId, userId);
-        }
+        #endregion
+
+        #region Item Queries
 
         public async Task<IEnumerable<MarketplaceItemDto>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null)
         {
@@ -137,6 +168,9 @@ namespace CampusHub.Application.Services
 
         public async Task<IEnumerable<MarketplaceItemDto>> GetItemsBySellerAsync(int sellerId, int? currentUserId = null)
         {
+            if (sellerId <= 0)
+                throw new ArgumentException("Valid seller ID is required");
+
             var items = await _marketplaceRepository.GetBySellerAsync(sellerId);
             var itemDtos = new List<MarketplaceItemDto>();
 
@@ -156,42 +190,101 @@ namespace CampusHub.Application.Services
 
         public async Task<List<MarketplaceItemDto>> GetUserListingsAsync(int userId)
         {
+            if (userId <= 0)
+                throw new ArgumentException("Valid user ID is required");
+
             var items = await GetItemsBySellerAsync(userId);
             return items.ToList();
         }
 
         public async Task<List<MarketplaceItemDto>> GetUserItemsAsync(int userId)
         {
+            if (userId <= 0)
+                throw new ArgumentException("Valid user ID is required");
+
             var items = await GetItemsBySellerAsync(userId);
             return items.ToList();
         }
 
+        #endregion
+
+        #region Item Status Management
+
         public async Task UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status)
         {
+            if (itemId <= 0)
+                throw new ArgumentException("Valid item ID is required");
+
             var item = await _marketplaceRepository.GetByIdAsync(itemId);
             if (item != null)
             {
                 item.Status = status;
                 item.UpdatedDate = DateTime.UtcNow;
                 await _marketplaceRepository.UpdateAsync(item);
+                await _marketplaceRepository.SaveChangesAsync();
             }
+        }
+
+        public async Task MarkItemAvailableAsync(ItemStatusOperationDto dto)
+        {
+            var validation = ValidationHelper.ValidateItemStatusOperation(dto);
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
+            await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Active);
+        }
+
+        public async Task MarkItemSoldAsync(ItemStatusOperationDto dto)
+        {
+            var validation = ValidationHelper.ValidateItemStatusOperation(dto);
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
+            await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Sold);
+        }
+
+        #endregion
+
+        #region Like/Wishlist Operations
+
+        public async Task<bool> ToggleLikeAsync(int itemId, int userId)
+        {
+            var validation = ValidationHelper.ValidateToggleLike(new ToggleLikeDto
+            {
+                MarketplaceItemId = itemId,
+                UserId = userId
+            });
+
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
+            var result = await _marketplaceRepository.ToggleLikeAsync(itemId, userId);
+            await _marketplaceRepository.SaveChangesAsync();
+
+            return result;
         }
 
         public async Task ToggleLikeAsync(ToggleLikeDto toggleDto)
         {
+            var validation = ValidationHelper.ValidateToggleLike(toggleDto);
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
             await ToggleLikeAsync(toggleDto.MarketplaceItemId, toggleDto.UserId);
         }
 
-        // WISHLIST METHODS
         public async Task<List<MarketplaceItemDto>> GetUserWishlistAsync(int userId)
         {
+            if (userId <= 0)
+                throw new ArgumentException("Valid user ID is required");
+
             var items = await _marketplaceRepository.GetUserWishlistAsync(userId);
             var itemDtos = new List<MarketplaceItemDto>();
 
             foreach (var item in items)
             {
                 var dto = MapToDto(item);
-                dto.IsLiked = true; // All wishlist items are liked by definition
+                dto.IsLiked = true;
                 dto.TimeAgo = GetTimeAgo(item.CreatedDate);
                 itemDtos.Add(dto);
             }
@@ -201,13 +294,97 @@ namespace CampusHub.Application.Services
 
         public async Task<int> GetUserWishlistCountAsync(int userId)
         {
+            if (userId <= 0)
+                throw new ArgumentException("Valid user ID is required");
+
             return await _marketplaceRepository.GetUserWishlistCountAsync(userId);
         }
 
         public async Task<bool> RemoveFromWishlistAsync(int itemId, int userId)
         {
-            return await _marketplaceRepository.RemoveFromWishlistAsync(itemId, userId);
+            var validation = ValidationHelper.ValidateItemStatusOperation(new ItemStatusOperationDto
+            {
+                ItemId = itemId,
+                UserId = userId
+            });
+
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
+            var result = await _marketplaceRepository.RemoveFromWishlistAsync(itemId, userId);
+            await _marketplaceRepository.SaveChangesAsync();
+
+            return result;
         }
+
+        #endregion
+
+        #region Reporting Operations
+
+        public async Task<bool> ReportItemAsync(CreateReportDto reportDto)
+        {
+            var validation = ValidationHelper.ValidateCreateReport(reportDto);
+            if (!validation.IsValid)
+                throw new ArgumentException(string.Join("; ", validation.Errors));
+
+            var result = await _marketplaceRepository.ReportItemAsync(
+                reportDto.MarketplaceItemId,  // Using your original naming convention
+                reportDto.ReporterId,
+                reportDto.Reason,
+                reportDto.Description);
+
+            await _marketplaceRepository.SaveChangesAsync();
+            return result;
+        }
+
+        public async Task<IEnumerable<ReportDto>> GetAllReportsAsync()
+        {
+            var reports = await _marketplaceRepository.GetReportsAsync();
+            return reports.Select(MapToReportDto);
+        }
+
+        public async Task<IEnumerable<ReportDto>> GetReportsByItemAsync(int itemId)
+        {
+            if (itemId <= 0)
+                throw new ArgumentException("Valid item ID is required");
+
+            var reports = await _marketplaceRepository.GetReportsByItemAsync(itemId);
+            return reports.Select(MapToReportDto);
+        }
+
+        public async Task<bool> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null)
+        {
+            if (reportId <= 0 || adminUserId <= 0)
+                throw new ArgumentException("Valid report ID and admin user ID are required");
+
+            var result = await _marketplaceRepository.UpdateReportStatusAsync(reportId, status, adminUserId, adminNotes);
+            await _marketplaceRepository.SaveChangesAsync();
+            return result;
+        }
+
+        #endregion
+
+        #region Statistics
+
+        public async Task<UserStatsDto> GetUserStatsAsync(int userId)
+        {
+            if (userId <= 0)
+                throw new ArgumentException("Valid user ID is required");
+
+            var userItems = await GetItemsBySellerAsync(userId);
+            var itemsList = userItems.ToList();
+
+            return new UserStatsDto
+            {
+                TotalListings = itemsList.Count,
+                ActiveListings = itemsList.Count(x => x.Status == MarketplaceItemStatus.Active),
+                SoldItems = itemsList.Count(x => x.Status == MarketplaceItemStatus.Sold)
+            };
+        }
+
+        #endregion
+
+        #region Private Helper Methods
 
         private static MarketplaceItemDto MapToDto(MarketplaceItem item)
         {
@@ -224,12 +401,28 @@ namespace CampusHub.Application.Services
                 ImageUrl = item.ImageUrl,
                 SellerName = item.SellerName,
                 SellerId = item.SellerId,
-                ContactNumber = item.ContactNumber, // ← ADDED THIS!
+                ContactNumber = item.ContactNumber ?? string.Empty,
                 LikesCount = item.LikesCount,
                 CreatedDate = item.CreatedDate,
                 Status = item.Status,
                 UpdatedAt = item.UpdatedDate,
                 CreatedAt = item.CreatedDate
+            };
+        }
+
+        private static ReportDto MapToReportDto(Report report)
+        {
+            return new ReportDto
+            {
+                Id = report.Id,
+                MarketplaceItemId = report.MarketplaceItemId,  
+                ReporterId = report.ReporterUserID,            
+                Reason = report.Reason,
+                Description = report.Description,
+                Status = report.Status.ToString(),
+                CreatedAt = report.CreatedAt,
+                AdminNotes = report.AdminNotes,                
+                AdminUserId = report.ResolvedByUserId
             };
         }
 
@@ -257,5 +450,7 @@ namespace CampusHub.Application.Services
                 _ => $"{(int)(timeSpan.TotalDays / 30)} months ago"
             };
         }
+
+        #endregion
     }
 }

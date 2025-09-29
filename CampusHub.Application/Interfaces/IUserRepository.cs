@@ -12,5 +12,6 @@ namespace CampusHub.Application.Interfaces
         Task<User?> GetUserWithDetailsAsync(int id); 
         Task<List<User>> GetAllUsersWithDetailsAsync();
         Task<bool> UpdateAsync(User user);
+        Task SaveChangesAsync();
     }
 }

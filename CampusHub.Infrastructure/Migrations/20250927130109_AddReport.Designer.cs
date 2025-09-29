@@ -4,6 +4,7 @@ using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CampusHub.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250927130109_AddReport")]
+    partial class AddReport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -564,19 +567,6 @@ namespace CampusHub.Infrastructure.Migrations
                     b.HasIndex("YearLevelId");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            UserID = 999,
-                            DateRegistered = new DateTime(2025, 9, 28, 13, 50, 0, 0, DateTimeKind.Utc),
-                            Email = "admin@ucc.edu.ph",
-                            FullName = "System Administrator",
-                            MeetupPreferences = "[]",
-                            Password = "admin123",
-                            Role = "Admin",
-                            Username = "admin"
-                        });
                 });
 
             modelBuilder.Entity("CampusHub.Domain.Entities.YearLevel", b =>

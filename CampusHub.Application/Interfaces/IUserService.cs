@@ -1,4 +1,5 @@
 ﻿using CampusHub.Application.DTO;
+using System.Threading.Tasks;
 
 namespace CampusHub.Application.Interfaces
 {
@@ -13,6 +14,6 @@ namespace CampusHub.Application.Interfaces
         Task<List<CreateUserDto>> GetAllUsersAsync();
         Task<bool> UsernameExistsAsync(string username);
         Task<CurrentUserDto?> GetCurrentUserAsync(int userId);
-        Task<bool> UpdateUserProfileAsync(CurrentUserDto userDto);
+        Task<bool> UpdateUserProfileAsync(UpdateUserProfileDto userDto);
     }
 }

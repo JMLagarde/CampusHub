@@ -21,8 +21,9 @@ namespace CampusHub.Presentation.Controllers
             _marketplaceService = marketplaceService;
         }
 
+        
         [HttpPut("profile")]
-        public async Task<ActionResult> UpdateUserProfile([FromBody] CurrentUserDto userDto)
+        public async Task<ActionResult> UpdateUserProfile([FromBody] UpdateUserProfileDto userDto)
         {
             try
             {
@@ -53,6 +54,10 @@ namespace CampusHub.Presentation.Controllers
                     return BadRequest(new { message = "Failed to update profile" });
                 }
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
@@ -73,13 +78,15 @@ namespace CampusHub.Presentation.Controllers
                 var listings = await _marketplaceService.GetUserItemsAsync(userId.Value);
                 return Ok(listings);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
-
 
         [HttpGet("stats")]
         public async Task<ActionResult<UserStatsDto>> GetUserStats()
@@ -91,21 +98,20 @@ namespace CampusHub.Presentation.Controllers
                 {
                     return Unauthorized("User not found");
                 }
-                var listings = await _marketplaceService.GetUserItemsAsync(userId.Value);
-                var stats = new UserStatsDto
-                {
-                    TotalListings = listings.Count,
-                    ActiveListings = listings.Count(x => x.Status == MarketplaceItemStatus.Active),
-                    SoldItems = listings.Count(x => x.Status == MarketplaceItemStatus.Sold)
-                };
+
+                var stats = await _marketplaceService.GetUserStatsAsync(userId.Value);
                 return Ok(stats);
+
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
 
         private int? GetCurrentUserId()
         {
@@ -117,9 +123,6 @@ namespace CampusHub.Presentation.Controllers
             return null;
         }
 
-        /// <summary>
-        /// Get current user's wishlist
-        /// </summary>
         [HttpGet("wishlist")]
         public async Task<ActionResult<List<MarketplaceItemDto>>> GetUserWishlist()
         {
@@ -134,15 +137,16 @@ namespace CampusHub.Presentation.Controllers
                 var wishlistItems = await _marketplaceService.GetUserWishlistAsync(userId.Value);
                 return Ok(wishlistItems);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Get current user's wishlist count
-        /// </summary>
         [HttpGet("wishlist/count")]
         public async Task<ActionResult<int>> GetUserWishlistCount()
         {
@@ -157,15 +161,16 @@ namespace CampusHub.Presentation.Controllers
                 var count = await _marketplaceService.GetUserWishlistCountAsync(userId.Value);
                 return Ok(count);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Remove item from current user's wishlist
-        /// </summary>
         [HttpDelete("wishlist/item/{itemId}")]
         public async Task<IActionResult> RemoveFromWishlist(int itemId)
         {
@@ -186,11 +191,14 @@ namespace CampusHub.Presentation.Controllers
 
                 return Ok(new { message = "Item removed from wishlist successfully" });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
     }
 }
