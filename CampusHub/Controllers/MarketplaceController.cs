@@ -55,15 +55,16 @@ namespace CampusHub.Presentation.Controllers
         [HttpPost]
         public async Task<ActionResult<MarketplaceItemDto>> CreateItem([FromBody] CreateMarketplaceItemDto createItemDto)
         {
-            try
+            try //move try catch to service
             {
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                var createdItem = await _marketplaceService.CreateItemAsync(createItemDto);
-                return CreatedAtAction(nameof(GetItemById), new { id = createdItem.Id }, createdItem);
+                var createdItem = await _marketplaceService.CreateItemAsync(createItemDto); //create result
+               // return createdItemResult.ToActionResult();
+               return CreatedAtAction(nameof(GetItemById), new { id = createdItem.Id }, createdItem);
             }
             catch (Exception ex)
             {
@@ -230,11 +231,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Get user's wishlist count
-        /// </summary>
-        /// <param name="userId">User ID</param>
-        /// <returns>Count of wishlist items</returns>
         [HttpGet("wishlist/{userId}/count")]
         public async Task<ActionResult<int>> GetUserWishlistCount(int userId)
         {
@@ -249,12 +245,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        /// <summary>
-        /// Remove item from user's wishlist
-        /// </summary>
-        /// <param name="itemId">Item ID</param>
-        /// <param name="userId">User ID</param>
-        /// <returns>Success status</returns>
         [HttpDelete("wishlist/{itemId}/user/{userId}")]
         public async Task<IActionResult> RemoveFromWishlist(int itemId, int userId)
         {
@@ -295,7 +285,6 @@ namespace CampusHub.Presentation.Controllers
             }
         }
 
-        // Admin endpoints for managing reports
         [HttpGet("reports")]
         public async Task<ActionResult<IEnumerable<ReportDto>>> GetAllReports()
         {

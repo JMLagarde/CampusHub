@@ -31,7 +31,6 @@ namespace CampusHub.Presentation.Controllers
 
                 _logger.LogInformation($"Login successful for user: {loginResponse.Username}, Role: {loginResponse.Role}");
 
-                // Create claims for the authenticated user
                 var claims = new List<Claim>
                 {
                     new(ClaimTypes.NameIdentifier, loginResponse.UserId.ToString()),
@@ -55,7 +54,6 @@ namespace CampusHub.Presentation.Controllers
                 _logger.LogInformation($"Authentication cookie set for user: {loginResponse.Username}");
                 _logger.LogInformation($"Redirect URL: {loginResponse.RedirectUrl}");
 
-                // Return the structure that matches LoginResponseDto
                 return Ok(loginResponse);
             }
             catch (UnauthorizedAccessException ex)

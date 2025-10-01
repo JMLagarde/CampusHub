@@ -37,6 +37,10 @@ h1:focus {
     text-align: start;
 }
 
+.swal2-container,
+.swal2-popup {
+    z-index: 2147483647 !important;
+}
 
 /* Login.razor.css */
 
@@ -1831,13 +1835,13 @@ textarea:focus {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    z-index: 2147483647 !important; 
+    z-index: 9999 !important; 
     backdrop-filter: blur(3px) !important;
 }
 
 .modal-container {
     position: relative !important;
-    z-index: 2147483647 !important;
+    z-index: 9999 !important;
     background: white !important;
     border-radius: 12px !important;
     max-width: 600px !important;
@@ -2046,4 +2050,6 @@ textarea:focus {
     .search-input {
         width: 200px;
     }
+
 }
+

@@ -8,8 +8,8 @@ namespace CampusHub.Application.Interfaces
     {
         Task<IEnumerable<MarketplaceItemDto>> GetAllItemsAsync(int? currentUserId = null);
         Task<MarketplaceItemDto?> GetItemByIdAsync(int id, int? currentUserId = null);
-        Task<MarketplaceItemDto> CreateItemAsync(CreateMarketplaceItemDto dto);
-        Task<MarketplaceItemDto> UpdateItemAsync(UpdateMarketplaceItemDto dto);
+        Task<MarketplaceItemDto> CreateItemAsync(CreateMarketplaceItemDto dto); //task result
+        Task<MarketplaceItemDto> UpdateItemAsync(UpdateMarketplaceItemDto dto); // task result
         Task<bool> DeleteItemAsync(int id, int userId);
         Task<bool> ToggleLikeAsync(int itemId, int userId);
         Task<IEnumerable<MarketplaceItemDto>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null);

@@ -33,7 +33,6 @@ namespace CampusHub.Presentation.Controllers
                     return Unauthorized("User not found");
                 }
 
-                // Ensure the user can only update their own profile
                 if (userDto.Id != userId.Value)
                 {
                     return Forbid("You can only update your own profile");

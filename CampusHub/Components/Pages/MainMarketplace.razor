@@ -4,10 +4,13 @@
 @using CampusHub.Domain.Entities
 @using System.Text.Json
 @using System.Text
+@using CurrieTechnologies.Razor.SweetAlert2
 @inject HttpClient HttpClient
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
+@inject SweetAlertService Swal
+
 
 
 <div class="content-container">
@@ -74,7 +77,6 @@
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                             </svg>
                         </button>
-                        <!-- ADD THIS NEW THREE DOTS MENU -->
                         <div class="item-menu">
                             <button class="menu-button" @onclick="(e) => ToggleItemMenu(e, item.Id)" @onclick:stopPropagation="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
@@ -96,7 +98,6 @@
                             }
                         </div>
                     </div>
-                    <!-- Rest of your existing card content remains the same -->
                     <div class="item-content">
                         <div class="item-header">
                             <h3 class="item-title">@item.Title</h3>
@@ -306,7 +307,7 @@
                     <p class="text-muted">by @ItemToReport.SellerName</p>
                 </div>
 
-                <EditForm Model="NewReport" OnValidSubmit="SubmitReport">
+                <EditForm Model="NewReport" OnValidSubmit="HandleReportSubmit">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="validation-errors" />
 
@@ -732,7 +733,6 @@
 
             if (SelectedLocationFilter == null && SelectedCategoryFilter == null)
             {
-                // Load all items via API
                 var queryString = currentUserId.HasValue ? $"?userId={currentUserId}" : "";
                 var response = await HttpClient.GetAsync($"/api/marketplace{queryString}");
 
@@ -749,7 +749,6 @@
             }
             else
             {
-                // Apply client-side filtering to cached results
                 var filteredItems = AllMarketplaceItems.AsQueryable();
 
                 if (SelectedLocationFilter.HasValue)
@@ -829,18 +828,33 @@
         }
     }
 
+    private async Task HandleReportSubmit()
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Report this item?",
+            Text = "This will notify the administrators about your concern.",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes, report it!",
+            CancelButtonText = "Cancel",
+            ConfirmButtonColor = "#ef4444",
+            CancelButtonColor = "#6b7280",
+            ReverseButtons = true
+        });
+
+        if (!result.IsConfirmed)
+        {
+            return;
+        }
+
+        await SubmitReport();
+    }
+
     private async Task SubmitReport()
     {
         try
         {
-            // Simple browser confirmation
-            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to report this item?");
-
-            if (!confirmed)
-            {
-                return; // User cancelled
-            }
-
             if (ItemToReport == null) return;
 
             IsReporting = true;
@@ -867,7 +881,6 @@
                 ShowReportSuccessPopup = true;
                 StateHasChanged();
 
-                // Auto-close after 3 seconds
                 await Task.Delay(3000);
                 ShowReportSuccessPopup = false;
                 StateHasChanged();
@@ -958,7 +971,7 @@
         ItemToReport = item;
         NewReport = new CreateReportDto();
         ShowReportDialog = true;
-        ShowMenuForItemId = null; // Hide menu
+        ShowMenuForItemId = null;
         StateHasChanged();
     }
 

@@ -2,11 +2,10 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
+
 <div class="student-portal">
-    <!-- Header -->
     <header class="header">
         <div class="header-container">
-            <!-- Logo -->
             <div class="header-logo">
                 <img src="images/UCC_logo.png" alt="University Logo" class="logo-img">
                 <div class="logo-text">
@@ -42,126 +41,20 @@
                 </NavLink>
             </div>
 
-            <!-- User Actions -->
             <div class="header-actions">
-                <div class="user-menu">
-                    <button class="user-button" @onclick="ToggleUserMenu">
-                        <div class="avatar">
-                            <span>@GetUserInitials()</span>
-                        </div>
-                        <span class="user-name">@GetUserFirstName()</span>
-                    </button>
-
-                    <div class="user-dropdown @(IsUserMenuOpen ? "" : "hidden")">
-                        <div class="user-info">
-                            <p class="user-full-name">@CurrentUserFullName</p>
-                            <div class="user-badges">
-                                <span class="badge badge-outline">@CurrentUserStudentNumber</span>
-                                <span class="badge badge-secondary">@CurrentUserYearLevel</span>
-                            </div>
-                            <p class="user-program">@CurrentUserProgram</p>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <NavLink href="/profile" class="dropdown-item" @onclick="CloseUserMenu">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                            My Profile
-                        </NavLink>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item text-destructive" @onclick="Logout">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <polyline points="16,17 21,12 16,7" />
-                                <line x1="21" y1="12" x2="9" y2="12" />
-                            </svg>
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
+                <a href="javascript:void(0)" class="logout-button" onclick="if(confirm('Are you sure you want to logout?')) { sessionStorage.clear(); window.location.href='/login'; }" title="Sign Out">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16,17 21,12 16,7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span style="margin-left: 0.5rem;">Logout</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="main-content">
         @Body
     </main>
 </div>
-
-@code {
-    // User-related properties - these should be injected from your services
-    public string CurrentUserFullName { get; set; } = "John Doe";
-    public string CurrentUserStudentNumber { get; set; } = "2024-CS-0001";
-    public string CurrentUserYearLevel { get; set; } = "3rd Year";
-    public string CurrentUserProgram { get; set; } = "Computer Science";
-
-    // UI State
-    public bool IsUserMenuOpen { get; set; } = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Load user data from your services
-        await LoadUserData();
-    }
-
-    private string GetUserInitials()
-    {
-        if (string.IsNullOrEmpty(CurrentUserFullName)) return "U";
-
-        var names = CurrentUserFullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (names.Length >= 2)
-            return $"{names[0][0]}{names[1][0]}".ToUpper();
-        else if (names.Length == 1)
-            return names[0][0].ToString().ToUpper();
-
-        return "U";
-    }
-
-    private string GetUserFirstName()
-    {
-        if (string.IsNullOrEmpty(CurrentUserFullName)) return "User";
-
-        var names = CurrentUserFullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return names.Length > 0 ? names[0] : "User";
-    }
-
-    private void ToggleUserMenu()
-    {
-        IsUserMenuOpen = !IsUserMenuOpen;
-    }
-
-    private void CloseUserMenu()
-    {
-        IsUserMenuOpen = false;
-    }
-
-    private async Task Logout()
-    {
-        CloseUserMenu();
-        Navigation.NavigateTo("/");
-    }
-
-    private async Task LoadUserData()
-    {
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JSRuntime.InvokeVoidAsync("addClickOutsideHandler", "user-dropdown", DotNetObjectReference.Create(this));
-        }
-    }
-
-    [JSInvokable]
-    public void OnClickOutside()
-    {
-        if (IsUserMenuOpen)
-        {
-            IsUserMenuOpen = false;
-            InvokeAsync(StateHasChanged);
-        }
-    }
-}
