@@ -10,29 +10,24 @@ namespace CampusHub.Application.Helpers
         {
             var errors = new List<string>();
 
-            // Title validation
             if (string.IsNullOrWhiteSpace(dto.Title))
                 errors.Add("Title is required");
             else if (dto.Title.Length > 100)
                 errors.Add("Title cannot exceed 100 characters");
 
-            // Description validation
             if (string.IsNullOrWhiteSpace(dto.Description))
                 errors.Add("Description is required");
             else if (dto.Description.Length > 500)
                 errors.Add("Description cannot exceed 500 characters");
 
-            // Price validation
             if (dto.Price <= 0)
                 errors.Add("Price must be greater than 0");
             else if (dto.Price > 999999)
                 errors.Add("Price cannot exceed ₱999,999");
 
-            // Image URL validation
             if (!string.IsNullOrEmpty(dto.ImageUrl) && !IsValidUrl(dto.ImageUrl))
                 errors.Add("Please enter a valid URL");
 
-            // Contact number validation
             if (!string.IsNullOrEmpty(dto.ContactNumber) && !IsValidPhoneNumber(dto.ContactNumber))
                 errors.Add("Please enter a valid contact number");
 
@@ -47,33 +42,27 @@ namespace CampusHub.Application.Helpers
         {
             var errors = new List<string>();
 
-            // ID validation (specific to updates)
             if (dto.Id <= 0)
                 errors.Add("Invalid item ID");
 
-            // Title validation
             if (string.IsNullOrWhiteSpace(dto.Title))
                 errors.Add("Title is required");
             else if (dto.Title.Length > 100)
                 errors.Add("Title cannot exceed 100 characters");
 
-            // Description validation
             if (string.IsNullOrWhiteSpace(dto.Description))
                 errors.Add("Description is required");
             else if (dto.Description.Length > 500)
                 errors.Add("Description cannot exceed 500 characters");
 
-            // Price validation
             if (dto.Price <= 0)
                 errors.Add("Price must be greater than 0");
             else if (dto.Price > 999999)
                 errors.Add("Price cannot exceed ₱999,999");
 
-            // Image URL validation
             if (!string.IsNullOrEmpty(dto.ImageUrl) && !IsValidUrl(dto.ImageUrl))
                 errors.Add("Please enter a valid URL");
 
-            // Contact number validation
             if (!string.IsNullOrEmpty(dto.ContactNumber) && !IsValidPhoneNumber(dto.ContactNumber))
                 errors.Add("Please enter a valid contact number");
 
@@ -88,29 +77,24 @@ namespace CampusHub.Application.Helpers
         {
             var errors = new List<string>();
 
-            // Username validation
             if (string.IsNullOrWhiteSpace(dto.Username))
                 errors.Add("Username is required");
             else if (dto.Username.Length > 50)
                 errors.Add("Username cannot exceed 50 characters");
 
-            // Full name validation
             if (string.IsNullOrWhiteSpace(dto.FullName))
                 errors.Add("Full name is required");
             else if (dto.FullName.Length > 100)
                 errors.Add("Full name cannot exceed 100 characters");
 
-            // Password validation
             if (string.IsNullOrWhiteSpace(dto.Password))
                 errors.Add("Password is required");
             else if (dto.Password.Length < 6 || dto.Password.Length > 100)
                 errors.Add("Password must be between 6 and 100 characters");
 
-            // Email validation
             if (!string.IsNullOrEmpty(dto.Email) && !IsValidEmail(dto.Email))
                 errors.Add("Please enter a valid email address");
 
-            // Contact number validation
             if (!string.IsNullOrEmpty(dto.ContactNumber) && !IsValidPhoneNumber(dto.ContactNumber))
                 errors.Add("Please enter a valid contact number");
 
@@ -197,7 +181,6 @@ namespace CampusHub.Application.Helpers
             };
         }
 
-        // Helper methods
         private static bool IsValidUrl(string url)
         {
             return Uri.TryCreate(url, UriKind.Absolute, out var result)

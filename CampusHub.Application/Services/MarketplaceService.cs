@@ -3,6 +3,7 @@ using CampusHub.Application.Interfaces;
 using CampusHub.Application.Helpers;
 using CampusHub.Domain.Entities;
 
+
 namespace CampusHub.Application.Services
 {
     public class MarketplaceService : IMarketplaceService
@@ -13,8 +14,6 @@ namespace CampusHub.Application.Services
         {
             _marketplaceRepository = marketplaceRepository;
         }
-
-        #region Item CRUD Operations
 
         public async Task<IEnumerable<MarketplaceItemDto>> GetAllItemsAsync(int? currentUserId = null)
         {
@@ -55,14 +54,14 @@ namespace CampusHub.Application.Services
 
         public async Task<MarketplaceItemDto> CreateItemAsync(CreateMarketplaceItemDto dto)
         {
-            // Validate using ValidationHelper
+            // move try catch here
             var validation = ValidationHelper.ValidateCreateMarketplaceItem(dto);
             if (!validation.IsValid)
             {
-                throw new ArgumentException(string.Join("; ", validation.Errors));
+                throw new ArgumentException(string.Join("; ", validation.Errors)); //domain error method
+                // return Result.Fail( new DomainError(string.Join("; ", validation.Errors )); 
             }
 
-            // Business logic validations
             if (dto.SellerId <= 0)
             {
                 throw new ArgumentException("Valid seller ID is required");
@@ -96,14 +95,12 @@ namespace CampusHub.Application.Services
 
         public async Task<MarketplaceItemDto> UpdateItemAsync(UpdateMarketplaceItemDto dto)
         {
-            // Validate using ValidationHelper
             var validation = ValidationHelper.ValidateUpdateMarketplaceItem(dto);
             if (!validation.IsValid)
             {
                 throw new ArgumentException(string.Join("; ", validation.Errors));
             }
 
-            // Business logic validations
             var existingItem = await _marketplaceRepository.GetByIdAsync(dto.Id);
             if (existingItem == null)
                 throw new ArgumentException("Item not found");
@@ -142,10 +139,6 @@ namespace CampusHub.Application.Services
 
             return result;
         }
-
-        #endregion
-
-        #region Item Queries
 
         public async Task<IEnumerable<MarketplaceItemDto>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null)
         {
@@ -206,9 +199,6 @@ namespace CampusHub.Application.Services
             return items.ToList();
         }
 
-        #endregion
-
-        #region Item Status Management
 
         public async Task UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status)
         {
@@ -242,10 +232,6 @@ namespace CampusHub.Application.Services
 
             await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Sold);
         }
-
-        #endregion
-
-        #region Like/Wishlist Operations
 
         public async Task<bool> ToggleLikeAsync(int itemId, int userId)
         {
@@ -317,10 +303,6 @@ namespace CampusHub.Application.Services
             return result;
         }
 
-        #endregion
-
-        #region Reporting Operations
-
         public async Task<bool> ReportItemAsync(CreateReportDto reportDto)
         {
             var validation = ValidationHelper.ValidateCreateReport(reportDto);
@@ -362,10 +344,6 @@ namespace CampusHub.Application.Services
             return result;
         }
 
-        #endregion
-
-        #region Statistics
-
         public async Task<UserStatsDto> GetUserStatsAsync(int userId)
         {
             if (userId <= 0)
@@ -381,10 +359,6 @@ namespace CampusHub.Application.Services
                 SoldItems = itemsList.Count(x => x.Status == MarketplaceItemStatus.Sold)
             };
         }
-
-        #endregion
-
-        #region Private Helper Methods
 
         private static MarketplaceItemDto MapToDto(MarketplaceItem item)
         {
@@ -450,7 +424,5 @@ namespace CampusHub.Application.Services
                 _ => $"{(int)(timeSpan.TotalDays / 30)} months ago"
             };
         }
-
-        #endregion
     }
 }

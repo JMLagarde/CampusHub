@@ -122,7 +122,6 @@ namespace CampusHub.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        // WISHLIST METHODS
         public async Task<IEnumerable<MarketplaceItem>> GetUserWishlistAsync(int userId)
         {
             return await _context.MarketplaceLikes
@@ -169,8 +168,8 @@ namespace CampusHub.Infrastructure.Repositories
             {
                 var report = new Report
                 {
-                    MarketplaceItemId = itemId, //here
-                    ReporterUserID = reporterId, //here
+                    MarketplaceItemId = itemId, 
+                    ReporterUserID = reporterId, 
                     Reason = reason,
                     Description = description,
                     CreatedAt = DateTime.UtcNow,
@@ -190,7 +189,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<IEnumerable<Report>> GetReportsAsync()
         {
             return await _context.Reports
-                .Include(r => r.MarketplaceItem) //here
+                .Include(r => r.MarketplaceItem) 
                 .Include(r => r.Reporter)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -199,7 +198,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<IEnumerable<Report>> GetReportsByItemAsync(int itemId)
         {
             return await _context.Reports
-                .Include(r => r.Reporter) //here
+                .Include(r => r.Reporter)
                 .Where(r => r.MarketplaceItemId == itemId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -208,7 +207,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<Report?> GetReportByIdAsync(int reportId)
         {
             return await _context.Reports
-                .Include(r => r.MarketplaceItem) //here
+                .Include(r => r.MarketplaceItem) 
                 .Include(r => r.Reporter)
                 .FirstOrDefaultAsync(r => r.Id == reportId);
         }
@@ -221,8 +220,8 @@ namespace CampusHub.Infrastructure.Repositories
                 if (report == null) return false;
 
                 report.Status = status;
-                report.ResolvedAt = DateTime.UtcNow; //here
-                report.ResolvedByUserId = adminUserId; //here
+                report.ResolvedAt = DateTime.UtcNow; 
+                report.ResolvedByUserId = adminUserId; 
                 report.AdminNotes = adminNotes;
 
                 await _context.SaveChangesAsync();
