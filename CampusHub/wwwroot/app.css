@@ -2006,7 +2006,7 @@ textarea:focus {
         }
 
 .main-content {
-    margin-left: 260px;
+    margin-left: 0px;
 }
 
 .sidebar.collapsed + .main-content {
@@ -2052,4 +2052,86 @@ textarea:focus {
     }
 
 }
+
+/* Set default font family */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Blazor error UI */
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+/* Loading spinner animation */
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.fa-spinner.fa-spin {
+    animation: spinner 1s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+/* Ensure images don't break layout */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Modal image styling */
+.modal-body img {
+    object-fit: contain;
+}
+
+/* Smooth transitions */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Event card hover effect */
+.card {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 

@@ -2,108 +2,188 @@
 using CampusHub.Application.Helpers;
 using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
+using FluentResults;
+using Microsoft.Extensions.Logging;
 
 namespace CampusHub.Application.Services
 {
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        private readonly ILogger<UserService> _logger;
 
-        public UserService(IUserRepository userRepository)
+        public UserService(IUserRepository userRepository, ILogger<UserService> logger)
         {
             _userRepository = userRepository;
+            _logger = logger;
         }
 
-        public async Task<int> CreateUserAsync(CreateUserDto dto)
+        public async Task<Result<int>> CreateUserAsync(CreateUserDto dto)
         {
-            // STEP 1: Validate using ValidationHelper
-            var validation = ValidationHelper.ValidateCreateUser(dto);
-            if (!validation.IsValid)
+            try
             {
-                throw new ArgumentException(string.Join("; ", validation.Errors));
+                var validation = ValidationHelper.ValidateCreateUser(dto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                if (await _userRepository.UsernameExistsAsync(dto.Username))
+                {
+                    return Result.Fail(new Error("Username already exists")
+                        .WithMetadata("StatusCode", 409));
+                }
+
+                var user = new User
+                {
+                    Username = dto.Username,
+                    FullName = dto.FullName,
+                    StudentNumber = dto.StudentNumber,
+                    Email = dto.Email,
+                    ContactNumber = dto.ContactNumber,
+                    Password = dto.Password,
+                    Role = "Student",
+                    DateRegistered = DateTime.Now,
+                    YearLevelId = dto.YearLevelId,
+                    ProgramID = dto.ProgramID
+                };
+
+                var result = await _userRepository.AddAsync(user);
+                await _userRepository.SaveChangesAsync();
+
+                return Result.Ok(result);
             }
-
-            // STEP 2: Business logic validations
-            if (await _userRepository.UsernameExistsAsync(dto.Username))
-                throw new InvalidOperationException("Username already exists");
-
-            var user = new User
+            catch (Exception ex)
             {
-                Username = dto.Username,
-                FullName = dto.FullName,
-                StudentNumber = dto.StudentNumber,
-                Email = dto.Email,
-                ContactNumber = dto.ContactNumber,
-                Password = dto.Password,
-                Role = "Student",
-                DateRegistered = DateTime.Now,
-                YearLevelId = dto.YearLevelId,
-                ProgramID = dto.ProgramID
-            };
-
-            var result = await _userRepository.AddAsync(user);
-            await _userRepository.SaveChangesAsync();
-
-            return result;
-        }
-
-        public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto)
-        {
-            // STEP 1: Validate using ValidationHelper
-            var validation = ValidationHelper.ValidateLogin(loginDto);
-            if (!validation.IsValid)
-            {
-                throw new ArgumentException(string.Join("; ", validation.Errors));
+                _logger.LogError(ex, "Error creating user: {Username}", dto.Username);
+                return Result.Fail(new Error("An error occurred while creating the user")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
             }
-
-            // STEP 2: Business logic validations
-            var user = await _userRepository.GetByUsernameAsync(loginDto.Username);
-            if (user == null || user.Password != loginDto.Password)
-                throw new UnauthorizedAccessException("Invalid username or password");
-
-            // Determine redirect URL based on role
-            string redirectUrl = user.IsAdmin() ? "/admin/events" : "/main-marketplace";
-
-            return new LoginResponseDto
-            {
-                UserId = user.UserID,
-                Username = user.Username,
-                FullName = user.FullName,
-                Role = user.Role ?? "Student",
-                Email = user.Email,
-                IsSuccess = true,
-                Message = "Login successful",
-                RedirectUrl = redirectUrl // Add this property to your LoginResponseDto
-            };
         }
 
-        public async Task<bool> ValidateUserAsync(string username, string password)
+        public async Task<Result<LoginResponseDto>> LoginAsync(LoginDto loginDto)
         {
-            var validation = ValidationHelper.ValidateLogin(new LoginDto
+            try
             {
-                Username = username,
-                Password = password
-            });
-
-            if (!validation.IsValid)
-                return false;
-
-            var user = await _userRepository.GetByUsernameAsync(username);
-            if (user == null)
-                return false;
-
-            return user.Password == password;
+                var validation = ValidationHelper.ValidateLogin(loginDto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+                var user = await _userRepository.GetByUsernameAsync(loginDto.Username);
+                if (user == null || user.Password != loginDto.Password)  
+                {
+                    _logger.LogWarning("Invalid login attempt for username: {Username}", loginDto.Username);
+                    return Result.Fail(new Error("Invalid username or password")
+                        .WithMetadata("StatusCode", 401));
+                }
+                string redirectUrl = user.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true
+                    ? "/admin/events"
+                    : "/main-marketplace";
+                _logger.LogInformation("Login successful for user {Username} with role {Role}, redirecting to {RedirectUrl}",
+                    user.Username, user.Role, redirectUrl);
+                var loginResponse = new LoginResponseDto
+                {
+                    UserId = user.UserID,
+                    Username = user.Username,
+                    FullName = user.FullName,
+                    Role = user.Role ?? "Student",
+                    Email = user.Email,
+                    IsSuccess = true,
+                    Message = "Login successful",
+                    RedirectUrl = redirectUrl
+                };
+                return Result.Ok(loginResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for username: {Username}", loginDto.Username);
+                return Result.Fail(new Error("An error occurred during login")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
         }
 
-        public Task LogoutAsync()
+        public async Task<Result<bool>> ValidateUserAsync(string username, string password)
         {
-            return Task.CompletedTask;
+            try
+            {
+                var validation = ValidationHelper.ValidateLogin(new LoginDto
+                {
+                    Username = username,
+                    Password = password
+                });
+
+                if (!validation.IsValid)
+                {
+                    return Result.Ok(false);
+                }
+
+                var user = await _userRepository.GetByUsernameAsync(username);
+                if (user == null)
+                {
+                    return Result.Ok(false);
+                }
+
+                return Result.Ok(user.Password == password);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating user: {Username}", username);
+                return Result.Fail(new Error("An error occurred during validation")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
         }
 
+        public Task<Result> LogoutAsync()
+        {
+            return Task.FromResult(Result.Ok());
+        }
+
+        public async Task<Result<bool>> UpdateUserProfileAsync(UpdateUserProfileDto userDto)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateUpdateUserProfile(userDto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var existingUser = await _userRepository.GetUserWithDetailsAsync(userDto.Id);
+                if (existingUser == null)
+                {
+                    return Result.Fail(new Error("User not found")
+                        .WithMetadata("StatusCode", 404));
+                }
+
+                existingUser.FullName = userDto.FullName;
+                existingUser.StudentNumber = userDto.StudentNumber;
+                existingUser.Email = userDto.Email;
+                existingUser.ContactNumber = userDto.ContactNumber;
+                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                await _userRepository.UpdateAsync(existingUser);
+                await _userRepository.SaveChangesAsync();
+
+                return Result.Ok(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user profile: {UserId}", userDto.Id);
+                return Result.Fail(new Error("An error occurred while updating the user profile")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
         public async Task<CurrentUserDto?> GetUserByIdAsync(int userId)
         {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
+            if (userId <= 0) return null;
 
             var user = await _userRepository.GetUserWithDetailsAsync(userId);
             if (user == null) return null;
@@ -125,38 +205,6 @@ namespace CampusHub.Application.Services
                 UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow,
                 ProfilePictureUrl = user.ProfilePictureUrl
             };
-        }
-
-        public async Task<bool> UpdateUserProfileAsync(UpdateUserProfileDto userDto)
-        {
-            var validation = ValidationHelper.ValidateUpdateUserProfile(userDto);
-            if (!validation.IsValid)
-            {
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-            }
-
-            try
-            {
-                var existingUser = await _userRepository.GetUserWithDetailsAsync(userDto.Id);
-                if (existingUser == null)
-                    return false;
-
-                existingUser.FullName = userDto.FullName;
-                existingUser.StudentNumber = userDto.StudentNumber;
-                existingUser.Email = userDto.Email;
-                existingUser.ContactNumber = userDto.ContactNumber;
-                existingUser.UpdatedAt = DateTime.UtcNow;
-
-                await _userRepository.UpdateAsync(existingUser);
-                await _userRepository.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating user profile: {ex.Message}");
-                return false;
-            }
         }
 
         public async Task<CreateUserDto?> GetUserByUsernameAsync(string username)

@@ -1,5 +1,6 @@
 ﻿using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
+using FluentResults.Extensions.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -23,97 +24,79 @@ namespace CampusHub.Presentation.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                _logger.LogInformation($"Login attempt for username: {loginDto.Username}");
+                return BadRequest(ModelState);
+            }
 
-                var loginResponse = await _userService.LoginAsync(loginDto);
+            _logger.LogInformation("Login attempt for username: {Username}", loginDto.Username);
 
-                _logger.LogInformation($"Login successful for user: {loginResponse.Username}, Role: {loginResponse.Role}");
+            var result = await _userService.LoginAsync(loginDto);
 
-                var claims = new List<Claim>
+            if (result.IsFailed)
+            {
+                _logger.LogWarning("Failed login attempt for username: {Username}", loginDto.Username);
+                return result.ToActionResult();
+            }
+
+            var loginResponse = result.Value;
+            _logger.LogInformation("Login successful for user: {Username}, Role: {Role}",
+                loginResponse.Username, loginResponse.Role);
+
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, loginResponse.UserId.ToString()),
+                new(ClaimTypes.Name, loginResponse.Username),
+                new(ClaimTypes.Role, loginResponse.Role),
+                new("FullName", loginResponse.FullName)
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
                 {
-                    new(ClaimTypes.NameIdentifier, loginResponse.UserId.ToString()),
-                    new(ClaimTypes.Name, loginResponse.Username),
-                    new(ClaimTypes.Role, loginResponse.Role),
-                    new("FullName", loginResponse.FullName)
-                };
+                    IsPersistent = false,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(24)
+                });
 
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(identity);
+            _logger.LogInformation("Authentication cookie set for user: {Username}", loginResponse.Username);
+            _logger.LogInformation("Redirect URL: {RedirectUrl}", loginResponse.RedirectUrl);
 
-                await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    principal,
-                    new AuthenticationProperties
-                    {
-                        IsPersistent = false,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(24)
-                    });
-
-                _logger.LogInformation($"Authentication cookie set for user: {loginResponse.Username}");
-                _logger.LogInformation($"Redirect URL: {loginResponse.RedirectUrl}");
-
-                return Ok(loginResponse);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning($"Unauthorized login attempt for username: {loginDto.Username}");
-                return Unauthorized(new { message = "Invalid username or password" });
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError($"Argument error during login: {ex.Message}");
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Unexpected error during login for username: {loginDto.Username}");
-                return StatusCode(500, new { message = "An error occurred during login" });
-            }
+            return Ok(loginResponse);
         }
 
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
-            try
-            {
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                _logger.LogInformation("User logged out successfully");
-                return Ok(new { message = "Logged out successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during logout");
-                return StatusCode(500, new { message = "An error occurred during logout" });
-            }
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            _logger.LogInformation("User logged out successfully");
+
+            var result = await _userService.LogoutAsync();
+            return result.ToActionResult();
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult> Register([FromBody] CreateUserDto createUserDto)
+        public async Task<IActionResult> Register([FromBody] CreateUserDto createUserDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                var userIdResult = await _userService.CreateUserAsync(createUserDto);
-                _logger.LogInformation($"User registered successfully: {createUserDto.Username}");
+                return BadRequest(ModelState);
+            }
 
-                return Ok(new { message = "User registered successfully" });
-            }
-            catch (InvalidOperationException ex)
+            _logger.LogInformation("Registration attempt for username: {Username}", createUserDto.Username);
+
+            var result = await _userService.CreateUserAsync(createUserDto);
+
+            if (result.IsSuccess)
             {
-                _logger.LogWarning($"Registration conflict for username: {createUserDto.Username} - {ex.Message}");
-                return Conflict(new { message = ex.Message });
+                _logger.LogInformation("User registered successfully: {Username}", createUserDto.Username);
             }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError($"Registration validation error: {ex.Message}");
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Unexpected error during registration for username: {createUserDto.Username}");
-                return StatusCode(500, new { message = "An internal error occurred" });
-            }
+
+            return result.ToActionResult();
         }
     }
 }

@@ -1,15 +1,14 @@
 ﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
-using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CampusHub.Infrastructure.Repositories
+namespace CampusHub.Application.Repositories
 {
     public class YearLevelRepository : IYearLevelRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public YearLevelRepository(ApplicationDbContext context)
+        public YearLevelRepository(IApplicationDbContext context)
         {
             _context = context;
         }

@@ -12,5 +12,6 @@ namespace CampusHub.Domain.Entities
         public string CollegeName { get; set; } = string.Empty;
 
         public List<ProgramEntity> Programs { get; set; } = new();
+        public List<Event> Events { get; set; } = new();
     }
 }
