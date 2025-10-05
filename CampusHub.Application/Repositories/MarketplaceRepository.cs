@@ -1,15 +1,14 @@
 ﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
-using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CampusHub.Infrastructure.Repositories
+namespace CampusHub.Application.Repositories
 {
     public class MarketplaceRepository : IMarketplaceRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public MarketplaceRepository(ApplicationDbContext context)
+        public MarketplaceRepository(IApplicationDbContext context)
         {
             _context = context;
         }
@@ -34,7 +33,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<MarketplaceItem> CreateAsync(MarketplaceItem item)
         {
             _context.MarketplaceItems.Add(item);
-            await _context.SaveChangesAsync(); 
+            await _context.SaveChangesAsync();
             return item;
         }
 
@@ -54,7 +53,6 @@ namespace CampusHub.Infrastructure.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
-
 
         public async Task<bool> ToggleLikeAsync(int itemId, int userId)
         {
@@ -162,14 +160,15 @@ namespace CampusHub.Infrastructure.Repositories
 
             return false;
         }
+
         public async Task<bool> ReportItemAsync(int itemId, int reporterId, string reason, string? description)
         {
             try
             {
                 var report = new Report
                 {
-                    MarketplaceItemId = itemId, 
-                    ReporterUserID = reporterId, 
+                    MarketplaceItemId = itemId,
+                    ReporterUserID = reporterId,
                     Reason = reason,
                     Description = description,
                     CreatedAt = DateTime.UtcNow,
@@ -189,7 +188,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<IEnumerable<Report>> GetReportsAsync()
         {
             return await _context.Reports
-                .Include(r => r.MarketplaceItem) 
+                .Include(r => r.MarketplaceItem)
                 .Include(r => r.Reporter)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -207,7 +206,7 @@ namespace CampusHub.Infrastructure.Repositories
         public async Task<Report?> GetReportByIdAsync(int reportId)
         {
             return await _context.Reports
-                .Include(r => r.MarketplaceItem) 
+                .Include(r => r.MarketplaceItem)
                 .Include(r => r.Reporter)
                 .FirstOrDefaultAsync(r => r.Id == reportId);
         }
@@ -220,8 +219,8 @@ namespace CampusHub.Infrastructure.Repositories
                 if (report == null) return false;
 
                 report.Status = status;
-                report.ResolvedAt = DateTime.UtcNow; 
-                report.ResolvedByUserId = adminUserId; 
+                report.ResolvedAt = DateTime.UtcNow;
+                report.ResolvedByUserId = adminUserId;
                 report.AdminNotes = adminNotes;
 
                 await _context.SaveChangesAsync();
@@ -232,6 +231,7 @@ namespace CampusHub.Infrastructure.Repositories
                 return false;
             }
         }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

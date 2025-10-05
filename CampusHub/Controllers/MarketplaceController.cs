@@ -2,6 +2,7 @@
 using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using FluentResults.Extensions.AspNetCore;
 
 namespace CampusHub.Presentation.Controllers
 {
@@ -21,320 +22,210 @@ namespace CampusHub.Presentation.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetAllItems([FromQuery] int? userId = null)
         {
-            try
-            {
-                var items = await _marketplaceService.GetAllItemsAsync(userId);
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving marketplace items", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetAllItemsAsync(userId);
+            return result.ToActionResult();
         }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<MarketplaceItemDto>> GetItemById(int id, [FromQuery] int? userId = null)
         {
-            try
-            {
-                var item = await _marketplaceService.GetItemByIdAsync(id, userId);
-
-                if (item == null)
-                {
-                    return NotFound(new { message = "Marketplace item not found" });
-                }
-
-                return Ok(item);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving the marketplace item", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetItemByIdAsync(id, userId);
+            return result.ToActionResult();
         }
 
         [HttpPost]
         public async Task<ActionResult<MarketplaceItemDto>> CreateItem([FromBody] CreateMarketplaceItemDto createItemDto)
         {
-            try //move try catch to service
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+                return BadRequest(ModelState);
+            }
 
-                var createdItem = await _marketplaceService.CreateItemAsync(createItemDto); //create result
-               // return createdItemResult.ToActionResult();
-               return CreatedAtAction(nameof(GetItemById), new { id = createdItem.Id }, createdItem);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while creating the marketplace item", error = ex.Message });
-            }
+            var result = await _marketplaceService.CreateItemAsync(createItemDto);
+            return result.ToActionResult();
         }
 
         [HttpPut("{id}")]
         public async Task<ActionResult<MarketplaceItemDto>> UpdateItem(int id, [FromBody] UpdateMarketplaceItemDto updateItemDto)
         {
-            try
+            if (id != updateItemDto.Id)
             {
-                if (id != updateItemDto.Id)
-                {
-                    return BadRequest(new { message = "ID in URL does not match ID in request body" });
-                }
+                return BadRequest(new { message = "ID in URL does not match ID in request body" });
+            }
 
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-                var updatedItem = await _marketplaceService.UpdateItemAsync(updateItemDto);
-                return Ok(updatedItem);
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while updating the marketplace item", error = ex.Message });
-            }
+            var result = await _marketplaceService.UpdateItemAsync(updateItemDto);
+            return result.ToActionResult();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteItem(int id, [FromQuery] int userId)
+        public async Task<ActionResult<bool>> DeleteItem(int id, [FromQuery] int userId)
         {
-            try
-            {
-                var success = await _marketplaceService.DeleteItemAsync(id, userId);
-
-                if (!success)
-                {
-                    return NotFound(new { message = "Item not found or you don't have permission to delete it" });
-                }
-
-                return Ok(new { message = "Item deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while deleting the marketplace item", error = ex.Message });
-            }
+            var result = await _marketplaceService.DeleteItemAsync(id, userId);
+            return result.ToActionResult();
         }
 
         [HttpPost("{id}/toggle-like")]
-        public async Task<IActionResult> ToggleLike(int id, [FromBody] ToggleLikeDto toggleLikeDto)
+        public async Task<ActionResult<bool>> ToggleLike(int id, [FromBody] ToggleLikeDto toggleLikeDto)
         {
-            try
+            if (id != toggleLikeDto.ItemId)
             {
-                if (id != toggleLikeDto.ItemId)
-                {
-                    return BadRequest(new { message = "Item ID in URL does not match ID in request body" });
-                }
-
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var success = await _marketplaceService.ToggleLikeAsync(toggleLikeDto.ItemId, toggleLikeDto.UserId);
-
-                if (!success)
-                {
-                    return BadRequest(new { message = "Failed to toggle like status" });
-                }
-
-                return Ok(new { message = "Like status updated successfully" });
+                return BadRequest(new { message = "Item ID in URL does not match ID in request body" });
             }
-            catch (Exception ex)
+
+            if (!ModelState.IsValid)
             {
-                return StatusCode(500, new { message = "An error occurred while updating like status", error = ex.Message });
+                return BadRequest(ModelState);
             }
+
+            var result = await _marketplaceService.ToggleLikeAsync(toggleLikeDto.ItemId, toggleLikeDto.UserId);
+            return result.ToActionResult();
         }
 
         [HttpGet("location/{location}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsByLocation(CampusLocation location, [FromQuery] int? userId = null)
         {
-            try
-            {
-                var items = await _marketplaceService.GetItemsByLocationAsync(location, userId);
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving marketplace items by location", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetItemsByLocationAsync(location, userId);
+            return result.ToActionResult();
         }
 
         [HttpGet("seller/{sellerId}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsBySeller(int sellerId, [FromQuery] int? userId = null)
         {
-            try
-            {
-                var items = await _marketplaceService.GetItemsBySellerAsync(sellerId, userId);
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving seller's marketplace items", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetItemsBySellerAsync(sellerId, userId);
+            return result.ToActionResult();
         }
 
         [HttpGet("category/{category}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetItemsByCategory(ItemCategory category, [FromQuery] int? userId = null)
         {
-            try
+            var allItemsResult = await _marketplaceService.GetAllItemsAsync(userId);
+
+            if (allItemsResult.IsFailed)
             {
-                var items = await _marketplaceService.GetAllItemsAsync(userId);
-                var filteredItems = items.Where(i => i.Category == category);
-                return Ok(filteredItems);
+                return allItemsResult.ToActionResult();
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving marketplace items by category", error = ex.Message });
-            }
+
+            var filteredItems = allItemsResult.Value.Where(i => i.Category == category);
+            return Ok(filteredItems);
         }
 
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> SearchItems([FromQuery] string searchTerm, [FromQuery] int? userId = null)
         {
-            try
+            if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                if (string.IsNullOrWhiteSpace(searchTerm))
-                {
-                    return BadRequest(new { message = "Search term is required" });
-                }
-
-                var items = await _marketplaceService.GetAllItemsAsync(userId);
-                var searchResults = items.Where(i =>
-                    i.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    i.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                ).OrderByDescending(x => x.CreatedDate);
-
-                return Ok(searchResults);
+                return BadRequest(new { message = "Search term is required" });
             }
-            catch (Exception ex)
+
+            var allItemsResult = await _marketplaceService.GetAllItemsAsync(userId);
+
+            if (allItemsResult.IsFailed)
             {
-                return StatusCode(500, new { message = "An error occurred while searching marketplace items", error = ex.Message });
+                return allItemsResult.ToActionResult();
             }
+
+            var searchResults = allItemsResult.Value.Where(i =>
+                i.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                i.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).OrderByDescending(x => x.CreatedDate);
+
+            return Ok(searchResults);
         }
 
         [HttpGet("wishlist/{userId}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetUserWishlist(int userId)
         {
-            try
-            {
-                var wishlistItems = await _marketplaceService.GetUserWishlistAsync(userId);
-                return Ok(wishlistItems);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving user wishlist", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetUserWishlistAsync(userId);
+            return result.ToActionResult();
         }
 
         [HttpGet("wishlist/{userId}/count")]
         public async Task<ActionResult<int>> GetUserWishlistCount(int userId)
         {
-            try
-            {
-                var count = await _marketplaceService.GetUserWishlistCountAsync(userId);
-                return Ok(count);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving wishlist count", error = ex.Message });
-            }
+            var result = await _marketplaceService.GetUserWishlistCountAsync(userId);
+            return result.ToActionResult();
         }
 
         [HttpDelete("wishlist/{itemId}/user/{userId}")]
-        public async Task<IActionResult> RemoveFromWishlist(int itemId, int userId)
+        public async Task<ActionResult<bool>> RemoveFromWishlist(int itemId, int userId)
         {
-            try
-            {
-                var success = await _marketplaceService.RemoveFromWishlistAsync(itemId, userId);
-
-                if (!success)
-                {
-                    return NotFound(new { message = "Item not found in wishlist" });
-                }
-
-                return Ok(new { message = "Item removed from wishlist successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while removing item from wishlist", error = ex.Message });
-            }
+            var result = await _marketplaceService.RemoveFromWishlistAsync(itemId, userId);
+            return result.ToActionResult();
         }
+
         [HttpPost("{itemId}/report")]
-        public async Task<IActionResult> ReportItem(int itemId, [FromBody] CreateReportDto reportDto)
+        public async Task<ActionResult<bool>> ReportItem(int itemId, [FromBody] CreateReportDto reportDto)
         {
-            try
-            {
-                reportDto.MarketplaceItemId = itemId;
-                var success = await _marketplaceService.ReportItemAsync(reportDto);
-
-                if (success)
-                {
-                    return Ok(new { message = "Item reported successfully" });
-                }
-
-                return BadRequest(new { message = "Failed to report item" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            reportDto.MarketplaceItemId = itemId;
+            var result = await _marketplaceService.ReportItemAsync(reportDto);
+            return result.ToActionResult();
         }
 
         [HttpGet("reports")]
         public async Task<ActionResult<IEnumerable<ReportDto>>> GetAllReports()
         {
-            try
-            {
-                var reports = await _marketplaceService.GetAllReportsAsync();
-                return Ok(reports);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var result = await _marketplaceService.GetAllReportsAsync();
+            return result.ToActionResult();
         }
 
         [HttpGet("{itemId}/reports")]
         public async Task<ActionResult<IEnumerable<ReportDto>>> GetReportsByItem(int itemId)
         {
-            try
-            {
-                var reports = await _marketplaceService.GetReportsByItemAsync(itemId);
-                return Ok(reports);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var result = await _marketplaceService.GetReportsByItemAsync(itemId);
+            return result.ToActionResult();
         }
 
         [HttpPut("reports/{reportId}/status")]
-        public async Task<IActionResult> UpdateReportStatus(int reportId, [FromBody] UpdateReportStatusDto dto)
+        public async Task<ActionResult<bool>> UpdateReportStatus(int reportId, [FromBody] UpdateReportStatusDto dto)
         {
-            try
-            {
-                var success = await _marketplaceService.UpdateReportStatusAsync(
-                    reportId,
-                    dto.Status,
-                    dto.AdminUserId,
-                    dto.AdminNotes);
+            var result = await _marketplaceService.UpdateReportStatusAsync(
+                reportId,
+                dto.Status,
+                dto.AdminUserId,
+                dto.AdminNotes);
 
-                if (success)
-                {
-                    return Ok(new { message = "Report status updated successfully" });
-                }
+            return result.ToActionResult();
+        }
 
-                return NotFound(new { message = "Report not found" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+        [HttpPut("{itemId}/mark-available")]
+        public async Task<ActionResult> MarkItemAvailable(int itemId, [FromBody] ItemStatusOperationDto dto)
+        {
+            dto.ItemId = itemId;
+            var result = await _marketplaceService.MarkItemAvailableAsync(dto);
+            return result.ToActionResult();
+        }
+
+        [HttpPut("{itemId}/mark-sold")]
+        public async Task<ActionResult> MarkItemSold(int itemId, [FromBody] ItemStatusOperationDto dto)
+        {
+            dto.ItemId = itemId;
+            var result = await _marketplaceService.MarkItemSoldAsync(dto);
+            return result.ToActionResult();
+        }
+
+        [HttpGet("stats/{userId}")]
+        public async Task<ActionResult<UserStatsDto>> GetUserStats(int userId)
+        {
+            var result = await _marketplaceService.GetUserStatsAsync(userId);
+            return result.ToActionResult();
+        }
+
+        [HttpGet("user/{userId}/items")]
+        public async Task<ActionResult<List<MarketplaceItemDto>>> GetUserItems(int userId)
+        {
+            var result = await _marketplaceService.GetUserItemsAsync(userId);
+            return result.ToActionResult();
+        }
+
+        [HttpGet("user/{userId}/listings")]
+        public async Task<ActionResult<List<MarketplaceItemDto>>> GetUserListings(int userId)
+        {
+            var result = await _marketplaceService.GetUserListingsAsync(userId);
+            return result.ToActionResult();
         }
     }
 }

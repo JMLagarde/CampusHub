@@ -1,25 +1,46 @@
 using CampusHub.Application.Interfaces;
 using CampusHub.Application.Services;
 using CampusHub.Infrastructure.Data;
-using CampusHub.Infrastructure.Repositories;
+using CampusHub.Application.Repositories;
 using CampusHub.Presentation.Components;
-using Microsoft.AspNetCore.Authentication.Cookies; 
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using CurrieTechnologies.Razor.SweetAlert2;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure file upload limits
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; 
+});
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; 
+});
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddCircuitOptions(options => options.DetailedErrors = true);
+    .AddInteractiveServerComponents();
+
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options =>
+    {
+        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; 
+    })
+    .AddCircuitOptions(options =>
+    {
+        options.DetailedErrors = true;
+        options.DisconnectedCircuitMaxRetained = 100;
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
+        options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
+        options.MaxBufferedUnacknowledgedRenderBatches = 10;
+    });
 
 builder.Services.AddSweetAlert2();
-
 builder.Services.AddControllers();
-
-
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -40,16 +61,31 @@ builder.Services.AddAuthorizationCore(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<IApplicationDbContext>(provider =>
+    provider.GetRequiredService<ApplicationDbContext>());
+
 // Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IYearLevelRepository, YearLevelRepository>();
 builder.Services.AddScoped<IProgramRepository, ProgramRepository>();
 builder.Services.AddScoped<IMarketplaceRepository, MarketplaceRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<IAdminEventRepository, AdminEventRepository>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDropdownService, DropdownService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
+builder.Services.AddScoped<IEventService, EventService>();
+
+builder.Services.AddScoped<IAdminEventService>(provider =>
+{
+    var repository = provider.GetRequiredService<IAdminEventRepository>();
+    var logger = provider.GetRequiredService<ILogger<AdminEventService>>();
+    var webRootPath = builder.Environment.WebRootPath;
+
+    return new AdminEventService(repository, logger, webRootPath);
+});
 
 builder.Services.AddScoped(sp =>
 {
@@ -68,10 +104,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 // Blazor UI

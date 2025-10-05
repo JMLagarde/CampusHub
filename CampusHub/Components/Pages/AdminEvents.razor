@@ -1,0 +1,474 @@
+﻿@page "/admin/events"
+@layout Layout.AdminLayout
+@using CampusHub.Application.DTO
+@using CampusHub.Application.DTOs
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+    <div>
+        <h3 class="text-lg font-bold text-gray-900 leading-tight">Event Management</h3>
+        <p class="text-xs text-gray-500 leading-tight max-w-md">Manage university events and announcements</p>
+    </div>
+    <button @onclick="OpenCreateModal" type="button" class="inline-flex items-center gap-2 bg-[#7ED957] text-white text-xs font-semibold rounded-md px-3 py-2 hover:bg-[#6fc43f] transition">
+        <i class="fas fa-plus"></i>
+        Create Event
+    </button>
+</div>
+
+<div class="border border-gray-200 rounded-lg p-5 overflow-x-auto" style="min-width: 900px">
+    <div class="mb-4">
+        <p class="text-sm font-semibold text-gray-900 leading-tight">All Events (@events.Count)</p>
+        <p class="text-xs text-gray-400 leading-tight">Manage and monitor all university events</p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-[#7ED957]"></i>
+            <p class="text-sm text-gray-500 mt-2">Loading events...</p>
+        </div>
+    }
+    else if (!events.Any())
+    {
+        <div class="text-center py-8">
+            <i class="fas fa-calendar-times text-4xl text-gray-400"></i>
+            <p class="text-sm text-gray-500 mt-2">No events found</p>
+        </div>
+    }
+    else
+    {
+        <table class="w-full text-left text-xs text-gray-600 border-separate border-spacing-y-2">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="pb-2 font-semibold">Event</th>
+                    <th class="pb-2 font-semibold">College</th>
+                    <th class="pb-2 font-semibold">Category</th>
+                    <th class="pb-2 font-semibold">Priority</th>
+                    <th class="pb-2 font-semibold">Date</th>
+                    <th class="pb-2 font-semibold">Attendees</th>
+                    <th class="pb-2 font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach (var evt in events)
+                {
+                    <tr>
+                        <td class="py-2 pr-6">
+                            <p class="font-semibold text-gray-900 leading-tight">@evt.Title</p>
+                            <p class="text-xs text-gray-400 leading-tight">@evt.OrganizerName</p>
+                        </td>
+                        <td class="py-2 pr-6">
+                            <span class="inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-700 bg-gray-100 rounded-full">
+                                @evt.CollegeName
+                            </span>
+                        </td>
+                        <td class="py-2 pr-6">@evt.Type</td>
+                        <td class="py-2 pr-6">
+                            <span class="@GetPriorityBadgeClass(evt.Priority)">
+                                @evt.Priority.ToLower()
+                            </span>
+                        </td>
+                        <td class="py-2 pr-6">@evt.Date.ToString("MMMM dd, yyyy")</td>
+                        <td class="py-2 pr-6 flex items-center gap-1">
+                            <i class="fas fa-user-friends text-gray-400 text-[12px]"></i>
+                            @evt.InterestedCount
+                        </td>
+                        <td class="py-2 pr-6">
+                            <button @onclick="() => OpenEditModal(evt)" class="text-gray-600 hover:text-[#7ED957] mr-2">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button @onclick="() => DeleteEvent(evt.Id)" class="text-gray-600 hover:text-red-600">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="CloseModal">
+        <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">@(isEditMode ? "Edit Event" : "Create New Event")</h2>
+                <button @onclick="CloseModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <EditForm Model="eventForm" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1">Event Title</label>
+                            <InputText @bind-Value="eventForm.Title" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                            <ValidationMessage For="@(() => eventForm.Title)" class="text-red-600 text-xs mt-1" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1">Description</label>
+                            <InputTextArea @bind-Value="eventForm.Description" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" rows="3" />
+                            <ValidationMessage For="@(() => eventForm.Description)" class="text-red-600 text-xs mt-1" />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">College</label>
+                                <InputSelect @bind-Value="eventForm.CollegeId" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="0">Select College</option>
+                                    @foreach (var college in colleges)
+                                    {
+                                        <option value="@college.CollegeId">@college.CollegeName</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => eventForm.CollegeId)" class="text-red-600 text-xs mt-1" />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Program (Optional)</label>
+                                <InputSelect @bind-Value="eventForm.ProgramId" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="">Select Program</option>
+                                    @foreach (var program in filteredPrograms)
+                                    {
+                                        <option value="@program.Id">@program.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Campus Location</label>
+                                <InputSelect @bind-Value="eventForm.CampusLocationId" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="1">Main Campus</option>
+                                    <option value="2">Congressional Extension Campus</option>
+                                    <option value="3">Bagong Silang Extension Campus</option>
+                                    <option value="4">Camarin Extension Campus</option>
+                                </InputSelect>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Location</label>
+                                <InputText @bind-Value="eventForm.Location" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="e.g., Auditorium" />
+                                <ValidationMessage For="@(() => eventForm.Location)" class="text-red-600 text-xs mt-1" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Event Date</label>
+                                <InputDate @bind-Value="eventForm.Date" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                                <ValidationMessage For="@(() => eventForm.Date)" class="text-red-600 text-xs mt-1" />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Registration Deadline</label>
+                                <InputDate @bind-Value="eventForm.RegistrationDeadline" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Priority</label>
+                                <InputSelect @bind-Value="eventForm.Priority" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                </InputSelect>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Event Type</label>
+                                <InputText @bind-Value="eventForm.Type" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="e.g., Academic, Career" />
+                                <ValidationMessage For="@(() => eventForm.Type)" class="text-red-600 text-xs mt-1" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1">Event Image</label>
+                            <div class="flex items-start gap-4">
+                                <div class="flex-1">
+                                    <InputFile OnChange="HandleFileSelected" accept="image/*" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#7ED957] file:text-white hover:file:bg-[#6fc43f]" />
+                                    @if (!string.IsNullOrEmpty(uploadError))
+                                    {
+                                        <p class="text-red-600 text-xs mt-1">@uploadError</p>
+                                    }
+                                    @if (isUploading)
+                                    {
+                                        <p class="text-gray-500 text-xs mt-1">
+                                            <i class="fas fa-spinner fa-spin"></i> Uploading image...
+                                        </p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(selectedFileName))
+                                    {
+                                        <p class="text-gray-600 text-xs mt-1">
+                                            <i class="fas fa-check-circle text-green-600"></i> Selected: @selectedFileName
+                                        </p>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(imagePreviewUrl))
+                                {
+                                    <div class="w-24 h-24 border border-gray-300 rounded-md overflow-hidden">
+                                        <img src="@imagePreviewUrl" alt="Preview" class="w-full h-full object-cover" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" @onclick="CloseModal" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled="@isUploading" class="px-4 py-2 bg-[#7ED957] text-white rounded-md hover:bg-[#6fc43f] text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                            @(isEditMode ? "Update Event" : "Create Event")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EventDto> events = new();
+    private List<CollegeDto> colleges = new();
+    private List<AdminProgramDto> programs = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private EventFormDto eventForm = new();
+    private bool isUploading = false;
+    private string uploadError = string.Empty;
+    private string selectedFileName = string.Empty;
+    private string imagePreviewUrl = string.Empty;
+
+    private IEnumerable<AdminProgramDto> filteredPrograms =>
+        eventForm.CollegeId > 0
+            ? programs.Where(p => p.CollegeId == eventForm.CollegeId)
+            : programs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            events = await Http.GetFromJsonAsync<List<EventDto>>("api/admin/adminevents") ?? new();
+            colleges = await Http.GetFromJsonAsync<List<CollegeDto>>("api/admin/adminevents/colleges") ?? new();
+            programs = await Http.GetFromJsonAsync<List<AdminProgramDto>>("api/admin/adminevents/programs") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        eventForm = new EventFormDto
+        {
+            Date = DateTime.Now.AddDays(7),
+            CampusLocationId = 1,
+            Priority = "Medium"
+        };
+        selectedFileName = string.Empty;
+        imagePreviewUrl = string.Empty;
+        uploadError = string.Empty;
+        showModal = true;
+    }
+
+    private void OpenEditModal(EventDto evt)
+    {
+        isEditMode = true;
+        eventForm = new EventFormDto
+        {
+            Id = evt.Id,
+            Title = evt.Title,
+            Description = evt.Description,
+            CollegeId = evt.CollegeId,
+            ProgramId = evt.ProgramId,
+            CampusLocationId = evt.CampusLocationId,
+            Date = evt.Date,
+            RegistrationDeadline = evt.RegistrationDeadline,
+            Location = evt.Location,
+            ImagePath = evt.ImagePath,
+            Priority = evt.Priority,
+            Type = evt.Type,
+            InterestedCount = evt.InterestedCount
+        };
+        selectedFileName = !string.IsNullOrEmpty(evt.ImagePath) ? Path.GetFileName(evt.ImagePath) : string.Empty;
+        imagePreviewUrl = !string.IsNullOrEmpty(evt.ImagePath) ? evt.ImagePath : string.Empty;
+        uploadError = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        eventForm = new();
+        selectedFileName = string.Empty;
+        imagePreviewUrl = string.Empty;
+        uploadError = string.Empty;
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadError = string.Empty;
+        var file = e.File;
+
+        if (file == null) return;
+
+        const long maxFileSize = 5 * 1024 * 1024;
+        if (file.Size > maxFileSize)
+        {
+            uploadError = "File size must be less than 5MB";
+            return;
+        }
+
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType))
+        {
+            uploadError = "Only image files (JPEG, PNG, GIF, WebP) are allowed";
+            return;
+        }
+
+        try
+        {
+            isUploading = true;
+            selectedFileName = file.Name;
+
+            // Upload to server WITHOUT creating preview
+            var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var response = await Http.PostAsync("api/admin/adminevents/upload-image", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ImageUploadResponse>();
+                if (result != null && !string.IsNullOrEmpty(result.ImagePath))
+                {
+                    eventForm.ImagePath = result.ImagePath;
+                    imagePreviewUrl = result.ImagePath; 
+                }
+                else
+                {
+                    uploadError = "Failed to get image path from server";
+                }
+            }
+            else
+            {
+                uploadError = "Failed to upload image";
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadError = $"Error uploading image: {ex.Message}";
+            Console.WriteLine($"Error uploading image: {ex.Message}");
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            var eventDto = new EventDto
+            {
+                Id = eventForm.Id,
+                Title = eventForm.Title,
+                Description = eventForm.Description,
+                CollegeId = eventForm.CollegeId,
+                ProgramId = eventForm.ProgramId,
+                CampusLocationId = eventForm.CampusLocationId,
+                Date = eventForm.Date,
+                RegistrationDeadline = eventForm.RegistrationDeadline,
+                Location = eventForm.Location,
+                ImagePath = eventForm.ImagePath,
+                Priority = eventForm.Priority,
+                Type = eventForm.Type,
+                InterestedCount = eventForm.InterestedCount
+            };
+
+            HttpResponseMessage response;
+            if (isEditMode)
+            {
+                response = await Http.PutAsJsonAsync($"api/admin/adminevents/{eventDto.Id}", eventDto);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/admin/adminevents", eventDto);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+                CloseModal();
+            }
+            else
+            {
+                Console.WriteLine($"Error saving event: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving event: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteEvent(int eventId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this event?");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/admin/adminevents/{eventId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting event: {ex.Message}");
+        }
+    }
+
+    private string GetPriorityBadgeClass(string priority)
+    {
+        return priority.ToLower() switch
+        {
+            "high" => "inline-block px-2 py-0.5 text-[10px] font-semibold text-white bg-[#7ED957] rounded-full",
+            "medium" => "inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-200 rounded-full",
+            "low" => "inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-200 rounded-full",
+            _ => "inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-200 rounded-full"
+        };
+    }
+
+    public class ImageUploadResponse
+    {
+        public string ImagePath { get; set; } = string.Empty;
+    }
+}

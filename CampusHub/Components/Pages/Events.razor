@@ -1,0 +1,462 @@
+﻿@page "/events"
+@layout Layout.MainLayout
+@using CampusHub.Application.DTOs
+@using CurrieTechnologies.Razor.SweetAlert2
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject SweetAlertService Swal
+
+
+<div class="max-w-7xl mx-auto px-4 py-4">
+    <nav class="flex flex-wrap gap-2 mb-4">
+        <button @onclick="@(() => FilterByCollege(null))"
+                class="flex items-center space-x-1 @(selectedCollegeId == null ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>All Categories</span>
+            <span class="@(selectedCollegeId == null ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @totalEvents
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(1))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 1 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Business and Accountancy</span>
+            <span class="@(selectedCollegeId == 1 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(1)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(2))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 2 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Criminal Justice Education</span>
+            <span class="@(selectedCollegeId == 2 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(2)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(3))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 3 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Education</span>
+            <span class="@(selectedCollegeId == 3 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(3)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(4))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 4 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Engineering</span>
+            <span class="@(selectedCollegeId == 4 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(4)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(5))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 5 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Law</span>
+            <span class="@(selectedCollegeId == 5 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(5)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(6))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 6 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Liberal Arts and Sciences</span>
+            <span class="@(selectedCollegeId == 6 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(6)
+            </span>
+        </button>
+
+        <button @onclick="@(() => FilterByCollege(7))"
+                class="flex items-center space-x-1 @(selectedCollegeId == 7 ? "bg-lime-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Graduate School</span>
+            <span class="@(selectedCollegeId == 7 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600") text-[10px] font-semibold rounded-full px-2 py-0.5">
+                @GetCollegeCount(7)
+            </span>
+        </button>
+    </nav>
+
+    <section>
+        <h1 class="text-lg font-extrabold text-gray-900 mb-1">University Events</h1>
+        <p class="text-xs text-gray-500 mb-2 flex items-center gap-2">
+            @filteredEvents.Count() upcoming events @(selectedCollegeId != null ? $"in {GetCollegeName(selectedCollegeId.Value)}" : "across all colleges")
+            <span class="bg-gray-200 text-gray-600 text-[10px] font-semibold rounded px-2 py-0.5">
+                Live Updates
+            </span>
+        </p>
+
+        @if (isLoading)
+        {
+            <div class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-2xl text-lime-500"></i>
+                <p class="text-sm text-gray-500 mt-2">Loading events...</p>
+            </div>
+        }
+        else if (!filteredEvents.Any())
+        {
+            <div class="text-center py-8">
+                <i class="fas fa-calendar-times text-4xl text-gray-400"></i>
+                <p class="text-sm text-gray-500 mt-2">No events found</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var evt in filteredEvents)
+            {
+                <article class="border border-gray-200 rounded-lg p-4 mb-6 relative flex flex-col md:flex-row md:space-x-4" style="border-left: 3px solid #84cc16">
+                    <img alt="@evt.Title"
+                         class="w-24 h-24 rounded-md object-cover mb-3 md:mb-0"
+                         src="@GetImagePath(evt.ImagePath)" />
+
+                    <div class="flex-1 flex flex-col">
+                        <div class="flex flex-wrap gap-1 mb-1">
+                            <span class="@GetPriorityClass(evt.Priority)">
+                                <i class="fas fa-check-circle text-[8px]"></i>
+                                @evt.Priority
+                            </span>
+                            <span class="text-[10px] font-normal border border-gray-300 rounded-full px-2 py-0.5">
+                                @evt.Type
+                            </span>
+                        </div>
+
+                        <h2 class="text-sm font-semibold text-gray-900 mb-1">@evt.Title</h2>
+
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+                            <span class="@GetCollegeBadgeClass(evt.CollegeId)">
+                                <i class="fas fa-graduation-cap text-[10px]"></i>
+                                @evt.CollegeName
+                            </span>
+
+                            @if (!string.IsNullOrEmpty(evt.ProgramName))
+                            {
+                                <span class="text-[10px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5">
+                                    @evt.ProgramName
+                                </span>
+                            }
+
+                            <span class="@GetCampusBadgeClass(evt.CampusLocationId)">
+                                <i class="fas fa-university text-[10px]"></i>
+                                @evt.CampusLocationName
+                            </span>
+
+                            <span class="flex items-center gap-1">
+                                <i class="far fa-calendar-alt text-xs"></i>
+                                @evt.Date.ToString("MMMM dd, yyyy")
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-gray-600 mb-3 leading-relaxed">@evt.Description</p>
+
+                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                            <span class="flex items-center gap-1 truncate max-w-[220px]">
+                                <i class="fas fa-map-marker-alt text-[10px]"></i>
+                                @evt.Location
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-user-friends text-[10px]"></i>
+                                @evt.InterestedCount interested
+                            </span>
+                            @if (evt.RegistrationDeadline.HasValue)
+                            {
+                                <span class="text-red-600 flex items-center gap-1">
+                                    <i class="fas fa-clock text-[10px]"></i>
+                                    Due: @evt.RegistrationDeadline.Value.ToString("MMMM dd, yyyy")
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col justify-between ml-auto mt-2 md:mt-0 space-y-2">
+                        <button @onclick="@(() => ToggleBookmark(evt.Id))"
+                                aria-label="Bookmark event"
+                                class="border border-gray-300 rounded-md p-1 text-gray-600 hover:text-lime-500">
+                            <i class="@(evt.IsBookmarked ? "fas fa-bookmark text-lime-500" : "far fa-bookmark")"></i>
+                        </button>
+                        <button @onclick="@(() => ShowEventModal(evt))"
+                                aria-label="Expand event"
+                                class="text-gray-600 hover:text-gray-900">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </article>
+            }
+        }
+    </section>
+</div>
+
+@if (selectedEvent != null && showModal)
+{
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="CloseModal">
+        <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">@selectedEvent.Title</h2>
+                <button @onclick="CloseModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <div class="text-center mb-4">
+                    <img src="@GetImagePath(selectedEvent.ImagePath)" alt="@selectedEvent.Title" class="max-h-96 mx-auto rounded-lg shadow-lg" />
+                    <p class="text-gray-400 text-xs mt-2 italic">Image uploaded by admin</p>
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <span class="@GetPriorityClass(selectedEvent.Priority)">
+                        <i class="fas fa-check-circle text-[8px]"></i> @selectedEvent.Priority Priority
+                    </span>
+                    <span class="text-[10px] font-normal border border-gray-300 rounded-full px-2 py-0.5">
+                        @selectedEvent.Type
+                    </span>
+                    <span class="@GetCollegeBadgeClass(selectedEvent.CollegeId)">
+                        <i class="fas fa-graduation-cap text-[10px]"></i> @selectedEvent.CollegeName
+                    </span>
+                    <span class="@GetCampusBadgeClass(selectedEvent.CampusLocationId)">
+                        <i class="fas fa-university text-[10px]"></i> @selectedEvent.CampusLocationName
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm mb-1">Campus</h3>
+                        <p class="text-sm">
+                            <i class="fas fa-university"></i> @selectedEvent.CampusLocationName
+                        </p>
+                    </div>
+                    @if (!string.IsNullOrEmpty(selectedEvent.ProgramName))
+                    {
+                        <div>
+                            <h3 class="font-bold text-sm mb-1">Program</h3>
+                            <p class="text-sm">@selectedEvent.ProgramName</p>
+                        </div>
+                    }
+                    <div>
+                        <h3 class="font-bold text-sm mb-1">Date</h3>
+                        <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent.Date.ToString("MMMM dd, yyyy")</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h3 class="font-bold text-sm mb-1">Location</h3>
+                    <p class="text-sm"><i class="fas fa-map-marker-alt"></i> @selectedEvent.Location</p>
+                </div>
+
+                <div class="mb-4">
+                    <h3 class="font-bold text-sm mb-1">Description</h3>
+                    <p class="text-sm">@selectedEvent.Description</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-bold text-sm mb-1">Interest</h3>
+                        <p class="text-sm"><i class="fas fa-user-friends"></i> @selectedEvent.InterestedCount people interested</p>
+                    </div>
+                    @if (selectedEvent.RegistrationDeadline.HasValue)
+                    {
+                        <div>
+                            <h3 class="font-bold text-sm mb-1">Registration Deadline</h3>
+                            <p class="text-sm text-red-600">
+                                <i class="fas fa-clock"></i> @selectedEvent.RegistrationDeadline.Value.ToString("MMMM dd, yyyy")
+                            </p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-2">
+                <button @onclick="CloseModal" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Close
+                </button>
+                <button @onclick="@(() => ToggleBookmark(selectedEvent.Id))"
+                        class="px-4 py-2 @(selectedEvent.IsBookmarked ? "bg-gray-400" : "bg-lime-500") text-white rounded-md hover:@(selectedEvent.IsBookmarked ? "bg-gray-500" : "bg-lime-600")">
+                    <i class="@(selectedEvent.IsBookmarked ? "fas fa-bookmark" : "far fa-bookmark")"></i>
+                    @(selectedEvent.IsBookmarked ? "Bookmarked" : "Bookmark Event")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EventDto> events = new();
+    private int? selectedCollegeId = null;
+    private bool isLoading = true;
+    private EventDto? selectedEvent = null;
+    private bool showModal = false;
+    private int currentUserId = 0;
+
+    private IEnumerable<EventDto> filteredEvents => selectedCollegeId == null
+        ? events
+        : events.Where(e => e.CollegeId == selectedCollegeId.Value);
+
+    private int totalEvents => events.Count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserId();
+        await LoadEvents();
+    }
+
+    private async Task GetCurrentUserId()
+    {
+        try
+        {
+            var userIdString = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userId");
+            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out var userId))
+            {
+                currentUserId = userId;
+                Console.WriteLine($"Current user ID: {currentUserId}");
+            }
+            else
+            {
+                Console.WriteLine("No user ID found in session storage");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting user ID: {ex.Message}");
+        }
+    }
+
+    private async Task LoadEvents()
+    {
+        isLoading = true;
+        try
+        {
+            events = await Http.GetFromJsonAsync<List<EventDto>>("api/events") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading events: {ex.Message}");
+            events = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterByCollege(int? collegeId)
+    {
+        selectedCollegeId = collegeId;
+    }
+
+    private int GetCollegeCount(int collegeId)
+    {
+        return events.Count(e => e.CollegeId == collegeId);
+    }
+
+    private string GetCollegeName(int collegeId)
+    {
+        return collegeId switch
+        {
+            1 => "Business and Accountancy",
+            2 => "Criminal Justice Education",
+            3 => "Education",
+            4 => "Engineering",
+            5 => "Law",
+            6 => "Liberal Arts and Sciences",
+            7 => "Graduate School",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetPriorityClass(string priority)
+    {
+        return priority.ToLower() switch
+        {
+            "high" => "text-[10px] font-semibold bg-lime-500 text-white rounded-full px-2 py-0.5 flex items-center gap-1",
+            "medium" => "text-[10px] font-semibold bg-gray-500 text-white rounded-full px-2 py-0.5 flex items-center gap-1",
+            "low" => "text-[10px] font-semibold bg-gray-300 text-gray-700 rounded-full px-2 py-0.5 flex items-center gap-1",
+            _ => "text-[10px] font-semibold bg-gray-400 text-white rounded-full px-2 py-0.5 flex items-center gap-1"
+        };
+    }
+
+    private string GetCollegeBadgeClass(int collegeId)
+    {
+        return collegeId switch
+        {
+            1 => "flex items-center gap-1 bg-yellow-100 text-yellow-600 rounded-md px-2 py-0.5 text-[10px]",
+            2 => "flex items-center gap-1 bg-red-100 text-red-600 rounded-md px-2 py-0.5 text-[10px]",
+            3 => "flex items-center gap-1 bg-green-100 text-green-600 rounded-md px-2 py-0.5 text-[10px]",
+            4 => "flex items-center gap-1 bg-orange-100 text-orange-600 rounded-md px-2 py-0.5 text-[10px]",
+            5 => "flex items-center gap-1 bg-purple-100 text-purple-600 rounded-md px-2 py-0.5 text-[10px]",
+            6 => "flex items-center gap-1 bg-blue-100 text-blue-600 rounded-md px-2 py-0.5 text-[10px]",
+            7 => "flex items-center gap-1 bg-indigo-100 text-indigo-600 rounded-md px-2 py-0.5 text-[10px]",
+            _ => "flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 text-[10px]"
+        };
+    }
+
+    private string GetCampusBadgeClass(int campusLocationId)
+    {
+        return campusLocationId switch
+        {
+            1 => "flex items-center gap-1 bg-teal-100 text-teal-700 rounded-md px-2 py-0.5 text-[10px]",
+            2 => "flex items-center gap-1 bg-pink-100 text-pink-700 rounded-md px-2 py-0.5 text-[10px]",
+            3 => "flex items-center gap-1 bg-cyan-100 text-cyan-700 rounded-md px-2 py-0.5 text-[10px]",
+            4 => "flex items-center gap-1 bg-emerald-100 text-emerald-700 rounded-md px-2 py-0.5 text-[10px]",
+            _ => "flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 text-[10px]"
+        };
+    }
+
+    private async Task ToggleBookmark(int eventId)
+    {
+        try
+        {
+            if (currentUserId <= 0)
+            {
+                Console.WriteLine("User not logged in");
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync($"api/events/{eventId}/toggle-bookmark", new { userId = currentUserId });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var evt = events.FirstOrDefault(e => e.Id == eventId);
+                if (evt != null)
+                {
+                    evt.IsBookmarked = !evt.IsBookmarked;
+
+                    if (evt.IsBookmarked)
+                    {
+                        evt.InterestedCount++;
+                    }
+                    else
+                    {
+                        evt.InterestedCount = Math.Max(0, evt.InterestedCount - 1);
+                    }
+
+                    if (selectedEvent != null && selectedEvent.Id == eventId)
+                    {
+                        selectedEvent.IsBookmarked = evt.IsBookmarked;
+                        selectedEvent.InterestedCount = evt.InterestedCount;
+                    }
+                }
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling bookmark: {ex.Message}");
+        }
+    }
+
+    private void ShowEventModal(EventDto evt)
+    {
+        selectedEvent = evt;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private string GetImagePath(string imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath))
+            return "/images/events/default-event.jpg";
+
+        return $"/uploads/events/{imagePath}";
+    }
+}

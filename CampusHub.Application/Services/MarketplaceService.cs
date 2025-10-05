@@ -1,365 +1,689 @@
-﻿using CampusHub.Application.DTO;
+﻿using FluentResults;
+using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
 using CampusHub.Application.Helpers;
 using CampusHub.Domain.Entities;
-
+using Microsoft.Extensions.Logging;
 
 namespace CampusHub.Application.Services
 {
     public class MarketplaceService : IMarketplaceService
     {
         private readonly IMarketplaceRepository _marketplaceRepository;
+        private readonly ILogger<MarketplaceService> _logger;
 
-        public MarketplaceService(IMarketplaceRepository marketplaceRepository)
+        public MarketplaceService(
+            IMarketplaceRepository marketplaceRepository,
+            ILogger<MarketplaceService> logger)
         {
             _marketplaceRepository = marketplaceRepository;
+            _logger = logger;
         }
 
-        public async Task<IEnumerable<MarketplaceItemDto>> GetAllItemsAsync(int? currentUserId = null)
+        public async Task<Result<IEnumerable<MarketplaceItemDto>>> GetAllItemsAsync(int? currentUserId = null)
         {
-            var items = await _marketplaceRepository.GetAllAsync();
-            var itemDtos = new List<MarketplaceItemDto>();
-
-            foreach (var item in items)
+            try
             {
+                var items = await _marketplaceRepository.GetAllAsync();
+                var itemDtos = new List<MarketplaceItemDto>();
+
+                foreach (var item in items)
+                {
+                    var dto = MapToDto(item);
+                    if (currentUserId.HasValue)
+                    {
+                        dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
+                    }
+                    dto.TimeAgo = GetTimeAgo(item.CreatedDate);
+                    itemDtos.Add(dto);
+                }
+
+                return Result.Ok(itemDtos.OrderByDescending(x => x.CreatedDate).AsEnumerable());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all marketplace items");
+                return Result.Fail(new Error("An error occurred while retrieving marketplace items")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<MarketplaceItemDto>> GetItemByIdAsync(int id, int? currentUserId = null)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return Result.Fail(new Error("Invalid item ID: Must be greater than 0")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var item = await _marketplaceRepository.GetByIdAsync(id);
+                if (item == null)
+                {
+                    return Result.Fail(new Error("Item not found")
+                        .WithMetadata("StatusCode", 404));
+                }
+
                 var dto = MapToDto(item);
                 if (currentUserId.HasValue)
                 {
                     dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
                 }
                 dto.TimeAgo = GetTimeAgo(item.CreatedDate);
-                itemDtos.Add(dto);
-            }
 
-            return itemDtos.OrderByDescending(x => x.CreatedDate);
+                return Result.Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving marketplace item {ItemId}", id);
+                return Result.Fail(new Error("An error occurred while retrieving the item")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
         }
 
-        public async Task<MarketplaceItemDto?> GetItemByIdAsync(int id, int? currentUserId = null)
+        public async Task<Result<MarketplaceItemDto>> CreateItemAsync(CreateMarketplaceItemDto dto)
         {
-            if (id <= 0)
-                throw new ArgumentException("Valid item ID is required");
-
-            var item = await _marketplaceRepository.GetByIdAsync(id);
-            if (item == null) return null;
-
-            var dto = MapToDto(item);
-            if (currentUserId.HasValue)
+            try
             {
-                dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
-            }
-            dto.TimeAgo = GetTimeAgo(item.CreatedDate);
-
-            return dto;
-        }
-
-        public async Task<MarketplaceItemDto> CreateItemAsync(CreateMarketplaceItemDto dto)
-        {
-            // move try catch here
-            var validation = ValidationHelper.ValidateCreateMarketplaceItem(dto);
-            if (!validation.IsValid)
-            {
-                throw new ArgumentException(string.Join("; ", validation.Errors)); //domain error method
-                // return Result.Fail( new DomainError(string.Join("; ", validation.Errors )); 
-            }
-
-            if (dto.SellerId <= 0)
-            {
-                throw new ArgumentException("Valid seller ID is required");
-            }
-
-            var item = new MarketplaceItem
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                Price = dto.Price,
-                Category = dto.Category,
-                Condition = dto.Condition,
-                MeetupPreference = dto.MeetupPreference,
-                Location = dto.Location,
-                ImageUrl = dto.ImageUrl,
-                SellerId = dto.SellerId,
-                SellerName = dto.SellerName,
-                ContactNumber = dto.ContactNumber,
-                CreatedDate = DateTime.UtcNow,
-                Status = MarketplaceItemStatus.Active
-            };
-
-            var createdItem = await _marketplaceRepository.CreateAsync(item);
-            await _marketplaceRepository.SaveChangesAsync();
-
-            var result = MapToDto(createdItem);
-            result.TimeAgo = GetTimeAgo(createdItem.CreatedDate);
-
-            return result;
-        }
-
-        public async Task<MarketplaceItemDto> UpdateItemAsync(UpdateMarketplaceItemDto dto)
-        {
-            var validation = ValidationHelper.ValidateUpdateMarketplaceItem(dto);
-            if (!validation.IsValid)
-            {
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-            }
-
-            var existingItem = await _marketplaceRepository.GetByIdAsync(dto.Id);
-            if (existingItem == null)
-                throw new ArgumentException("Item not found");
-
-            existingItem.Title = dto.Title;
-            existingItem.Description = dto.Description;
-            existingItem.Price = dto.Price;
-            existingItem.Condition = dto.Condition;
-            existingItem.Category = dto.Category;
-            existingItem.MeetupPreference = dto.MeetupPreference;
-            existingItem.Location = dto.Location;
-            existingItem.ImageUrl = dto.ImageUrl;
-            existingItem.ContactNumber = dto.ContactNumber;
-            existingItem.UpdatedDate = DateTime.UtcNow;
-
-            var updatedItem = await _marketplaceRepository.UpdateAsync(existingItem);
-            await _marketplaceRepository.SaveChangesAsync();
-
-            var result = MapToDto(updatedItem);
-            result.TimeAgo = GetTimeAgo(updatedItem.CreatedDate);
-
-            return result;
-        }
-
-        public async Task<bool> DeleteItemAsync(int id, int userId)
-        {
-            if (id <= 0 || userId <= 0)
-                throw new ArgumentException("Valid ID and User ID are required");
-
-            var item = await _marketplaceRepository.GetByIdAsync(id);
-            if (item == null || item.SellerId != userId)
-                return false;
-
-            var result = await _marketplaceRepository.DeleteAsync(id);
-            await _marketplaceRepository.SaveChangesAsync();
-
-            return result;
-        }
-
-        public async Task<IEnumerable<MarketplaceItemDto>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null)
-        {
-            var items = await _marketplaceRepository.GetByLocationAsync(location);
-            var itemDtos = new List<MarketplaceItemDto>();
-
-            foreach (var item in items)
-            {
-                var dto = MapToDto(item);
-                if (currentUserId.HasValue)
+                var validation = ValidationHelper.ValidateCreateMarketplaceItem(dto);
+                if (!validation.IsValid)
                 {
-                    dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
                 }
-                dto.TimeAgo = GetTimeAgo(item.CreatedDate);
-                itemDtos.Add(dto);
-            }
 
-            return itemDtos.OrderByDescending(x => x.CreatedDate);
-        }
-
-        public async Task<IEnumerable<MarketplaceItemDto>> GetItemsBySellerAsync(int sellerId, int? currentUserId = null)
-        {
-            if (sellerId <= 0)
-                throw new ArgumentException("Valid seller ID is required");
-
-            var items = await _marketplaceRepository.GetBySellerAsync(sellerId);
-            var itemDtos = new List<MarketplaceItemDto>();
-
-            foreach (var item in items)
-            {
-                var dto = MapToDto(item);
-                if (currentUserId.HasValue)
+                if (dto.SellerId <= 0)
                 {
-                    dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
+                    return Result.Fail(new Error("Valid seller ID is required")
+                        .WithMetadata("StatusCode", 400));
                 }
-                dto.TimeAgo = GetTimeAgo(item.CreatedDate);
-                itemDtos.Add(dto);
+
+                var item = new MarketplaceItem
+                {
+                    Title = dto.Title,
+                    Description = dto.Description,
+                    Price = dto.Price,
+                    Category = dto.Category,
+                    Condition = dto.Condition,
+                    MeetupPreference = dto.MeetupPreference,
+                    Location = dto.Location,
+                    ImageUrl = dto.ImageUrl,
+                    SellerId = dto.SellerId,
+                    SellerName = dto.SellerName,
+                    ContactNumber = dto.ContactNumber,
+                    CreatedDate = DateTime.UtcNow,
+                    Status = MarketplaceItemStatus.Active
+                };
+
+                var createdItem = await _marketplaceRepository.CreateAsync(item);
+                await _marketplaceRepository.SaveChangesAsync();
+
+                var result = MapToDto(createdItem);
+                result.TimeAgo = GetTimeAgo(createdItem.CreatedDate);
+
+                return Result.Ok(result);
             }
-
-            return itemDtos.OrderByDescending(x => x.CreatedDate);
-        }
-
-        public async Task<List<MarketplaceItemDto>> GetUserListingsAsync(int userId)
-        {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
-
-            var items = await GetItemsBySellerAsync(userId);
-            return items.ToList();
-        }
-
-        public async Task<List<MarketplaceItemDto>> GetUserItemsAsync(int userId)
-        {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
-
-            var items = await GetItemsBySellerAsync(userId);
-            return items.ToList();
-        }
-
-
-        public async Task UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status)
-        {
-            if (itemId <= 0)
-                throw new ArgumentException("Valid item ID is required");
-
-            var item = await _marketplaceRepository.GetByIdAsync(itemId);
-            if (item != null)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating marketplace item");
+                return Result.Fail(new Error("An error occurred while creating the marketplace item")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<MarketplaceItemDto>> UpdateItemAsync(UpdateMarketplaceItemDto dto)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateUpdateMarketplaceItem(dto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var existingItem = await _marketplaceRepository.GetByIdAsync(dto.Id);
+                if (existingItem == null)
+                {
+                    return Result.Fail(new Error("Item not found")
+                        .WithMetadata("StatusCode", 404));
+                }
+
+                existingItem.Title = dto.Title;
+                existingItem.Description = dto.Description;
+                existingItem.Price = dto.Price;
+                existingItem.Condition = dto.Condition;
+                existingItem.Category = dto.Category;
+                existingItem.MeetupPreference = dto.MeetupPreference;
+                existingItem.Location = dto.Location;
+                existingItem.ImageUrl = dto.ImageUrl;
+                existingItem.ContactNumber = dto.ContactNumber;
+                existingItem.UpdatedDate = DateTime.UtcNow;
+
+                var updatedItem = await _marketplaceRepository.UpdateAsync(existingItem);
+                await _marketplaceRepository.SaveChangesAsync();
+
+                var result = MapToDto(updatedItem);
+                result.TimeAgo = GetTimeAgo(updatedItem.CreatedDate);
+
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating marketplace item {ItemId}", dto.Id);
+                return Result.Fail(new Error("An error occurred while updating the marketplace item")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<bool>> DeleteItemAsync(int id, int userId)
+        {
+            try
+            {
+                if (id <= 0 || userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid ID and User ID are required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var item = await _marketplaceRepository.GetByIdAsync(id);
+                if (item == null)
+                {
+                    return Result.Fail(new Error("Item not found")
+                        .WithMetadata("StatusCode", 404));
+                }
+
+                if (item.SellerId != userId)
+                {
+                    return Result.Fail(new Error("You don't have permission to delete this item")
+                        .WithMetadata("StatusCode", 403));
+                }
+
+                var result = await _marketplaceRepository.DeleteAsync(id);
+                await _marketplaceRepository.SaveChangesAsync();
+
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting marketplace item {ItemId}", id);
+                return Result.Fail(new Error("An error occurred while deleting the marketplace item")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<IEnumerable<MarketplaceItemDto>>> GetItemsByLocationAsync(CampusLocation location, int? currentUserId = null)
+        {
+            try
+            {
+                var items = await _marketplaceRepository.GetByLocationAsync(location);
+                var itemDtos = new List<MarketplaceItemDto>();
+
+                foreach (var item in items)
+                {
+                    var dto = MapToDto(item);
+                    if (currentUserId.HasValue)
+                    {
+                        dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
+                    }
+                    dto.TimeAgo = GetTimeAgo(item.CreatedDate);
+                    itemDtos.Add(dto);
+                }
+
+                return Result.Ok(itemDtos.OrderByDescending(x => x.CreatedDate).AsEnumerable());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving items by location {Location}", location);
+                return Result.Fail(new Error("An error occurred while retrieving items by location")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<IEnumerable<MarketplaceItemDto>>> GetItemsBySellerAsync(int sellerId, int? currentUserId = null)
+        {
+            try
+            {
+                if (sellerId <= 0)
+                {
+                    return Result.Fail(new Error("Valid seller ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var items = await _marketplaceRepository.GetBySellerAsync(sellerId);
+                var itemDtos = new List<MarketplaceItemDto>();
+
+                foreach (var item in items)
+                {
+                    var dto = MapToDto(item);
+                    if (currentUserId.HasValue)
+                    {
+                        dto.IsLiked = await _marketplaceRepository.IsLikedByUserAsync(item.Id, currentUserId.Value);
+                    }
+                    dto.TimeAgo = GetTimeAgo(item.CreatedDate);
+                    itemDtos.Add(dto);
+                }
+
+                return Result.Ok(itemDtos.OrderByDescending(x => x.CreatedDate).AsEnumerable());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving items by seller {SellerId}", sellerId);
+                return Result.Fail(new Error("An error occurred while retrieving seller items")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<List<MarketplaceItemDto>>> GetUserListingsAsync(int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid user ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var itemsResult = await GetItemsBySellerAsync(userId);
+                if (itemsResult.IsFailed)
+                {
+                    return Result.Fail(itemsResult.Errors);
+                }
+
+                return Result.Ok(itemsResult.Value.ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user listings for userId: {UserId}", userId);
+                return Result.Fail(new Error("An error occurred while retrieving user listings")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result> UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status)
+        {
+            try
+            {
+                if (itemId <= 0)
+                {
+                    return Result.Fail(new Error("Valid item ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var item = await _marketplaceRepository.GetByIdAsync(itemId);
+                if (item == null)
+                {
+                    return Result.Fail(new Error("Item not found")
+                        .WithMetadata("StatusCode", 404));
+                }
+
                 item.Status = status;
                 item.UpdatedDate = DateTime.UtcNow;
                 await _marketplaceRepository.UpdateAsync(item);
                 await _marketplaceRepository.SaveChangesAsync();
+
+                return Result.Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating item status for {ItemId}", itemId);
+                return Result.Fail(new Error("An error occurred while updating item status")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
             }
         }
 
-        public async Task MarkItemAvailableAsync(ItemStatusOperationDto dto)
+        public async Task<Result> MarkItemAvailableAsync(ItemStatusOperationDto dto)
         {
-            var validation = ValidationHelper.ValidateItemStatusOperation(dto);
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Active);
-        }
-
-        public async Task MarkItemSoldAsync(ItemStatusOperationDto dto)
-        {
-            var validation = ValidationHelper.ValidateItemStatusOperation(dto);
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Sold);
-        }
-
-        public async Task<bool> ToggleLikeAsync(int itemId, int userId)
-        {
-            var validation = ValidationHelper.ValidateToggleLike(new ToggleLikeDto
+            try
             {
-                MarketplaceItemId = itemId,
-                UserId = userId
-            });
+                var validation = ValidationHelper.ValidateItemStatusOperation(dto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
 
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            var result = await _marketplaceRepository.ToggleLikeAsync(itemId, userId);
-            await _marketplaceRepository.SaveChangesAsync();
-
-            return result;
-        }
-
-        public async Task ToggleLikeAsync(ToggleLikeDto toggleDto)
-        {
-            var validation = ValidationHelper.ValidateToggleLike(toggleDto);
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            await ToggleLikeAsync(toggleDto.MarketplaceItemId, toggleDto.UserId);
-        }
-
-        public async Task<List<MarketplaceItemDto>> GetUserWishlistAsync(int userId)
-        {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
-
-            var items = await _marketplaceRepository.GetUserWishlistAsync(userId);
-            var itemDtos = new List<MarketplaceItemDto>();
-
-            foreach (var item in items)
-            {
-                var dto = MapToDto(item);
-                dto.IsLiked = true;
-                dto.TimeAgo = GetTimeAgo(item.CreatedDate);
-                itemDtos.Add(dto);
+                return await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Active);
             }
-
-            return itemDtos.OrderByDescending(x => x.CreatedDate).ToList();
-        }
-
-        public async Task<int> GetUserWishlistCountAsync(int userId)
-        {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
-
-            return await _marketplaceRepository.GetUserWishlistCountAsync(userId);
-        }
-
-        public async Task<bool> RemoveFromWishlistAsync(int itemId, int userId)
-        {
-            var validation = ValidationHelper.ValidateItemStatusOperation(new ItemStatusOperationDto
+            catch (Exception ex)
             {
-                ItemId = itemId,
-                UserId = userId
-            });
-
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            var result = await _marketplaceRepository.RemoveFromWishlistAsync(itemId, userId);
-            await _marketplaceRepository.SaveChangesAsync();
-
-            return result;
+                _logger.LogError(ex, "Error marking item available");
+                return Result.Fail(new Error("An error occurred while marking item as available")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
         }
 
-        public async Task<bool> ReportItemAsync(CreateReportDto reportDto)
+        public async Task<Result> MarkItemSoldAsync(ItemStatusOperationDto dto)
         {
-            var validation = ValidationHelper.ValidateCreateReport(reportDto);
-            if (!validation.IsValid)
-                throw new ArgumentException(string.Join("; ", validation.Errors));
-
-            var result = await _marketplaceRepository.ReportItemAsync(
-                reportDto.MarketplaceItemId,  // Using your original naming convention
-                reportDto.ReporterId,
-                reportDto.Reason,
-                reportDto.Description);
-
-            await _marketplaceRepository.SaveChangesAsync();
-            return result;
-        }
-
-        public async Task<IEnumerable<ReportDto>> GetAllReportsAsync()
-        {
-            var reports = await _marketplaceRepository.GetReportsAsync();
-            return reports.Select(MapToReportDto);
-        }
-
-        public async Task<IEnumerable<ReportDto>> GetReportsByItemAsync(int itemId)
-        {
-            if (itemId <= 0)
-                throw new ArgumentException("Valid item ID is required");
-
-            var reports = await _marketplaceRepository.GetReportsByItemAsync(itemId);
-            return reports.Select(MapToReportDto);
-        }
-
-        public async Task<bool> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null)
-        {
-            if (reportId <= 0 || adminUserId <= 0)
-                throw new ArgumentException("Valid report ID and admin user ID are required");
-
-            var result = await _marketplaceRepository.UpdateReportStatusAsync(reportId, status, adminUserId, adminNotes);
-            await _marketplaceRepository.SaveChangesAsync();
-            return result;
-        }
-
-        public async Task<UserStatsDto> GetUserStatsAsync(int userId)
-        {
-            if (userId <= 0)
-                throw new ArgumentException("Valid user ID is required");
-
-            var userItems = await GetItemsBySellerAsync(userId);
-            var itemsList = userItems.ToList();
-
-            return new UserStatsDto
+            try
             {
-                TotalListings = itemsList.Count,
-                ActiveListings = itemsList.Count(x => x.Status == MarketplaceItemStatus.Active),
-                SoldItems = itemsList.Count(x => x.Status == MarketplaceItemStatus.Sold)
-            };
+                var validation = ValidationHelper.ValidateItemStatusOperation(dto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                return await UpdateItemStatusAsync(dto.ItemId, MarketplaceItemStatus.Sold);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking item sold");
+                return Result.Fail(new Error("An error occurred while marking item as sold")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
         }
 
+        public async Task<Result<bool>> ToggleLikeAsync(int itemId, int userId)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateToggleLike(new ToggleLikeDto
+                {
+                    MarketplaceItemId = itemId,
+                    UserId = userId
+                });
+
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var result = await _marketplaceRepository.ToggleLikeAsync(itemId, userId);
+                await _marketplaceRepository.SaveChangesAsync();
+
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling like for item {ItemId}", itemId);
+                return Result.Fail(new Error("An error occurred while updating like status")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result> ToggleLikeAsync(ToggleLikeDto toggleDto)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateToggleLike(toggleDto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                await ToggleLikeAsync(toggleDto.MarketplaceItemId, toggleDto.UserId);
+                return Result.Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling like");
+                return Result.Fail(new Error("An error occurred while updating like status")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<bool>> ReportItemAsync(CreateReportDto reportDto)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateCreateReport(reportDto);
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var result = await _marketplaceRepository.ReportItemAsync(
+                    reportDto.MarketplaceItemId,
+                    reportDto.ReporterId,
+                    reportDto.Reason,
+                    reportDto.Description);
+
+                await _marketplaceRepository.SaveChangesAsync();
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reporting item");
+                return Result.Fail(new Error("An error occurred while reporting the item")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<IEnumerable<ReportDto>>> GetAllReportsAsync()
+        {
+            try
+            {
+                var reports = await _marketplaceRepository.GetReportsAsync();
+                return Result.Ok(reports.Select(MapToReportDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all reports");
+                return Result.Fail(new Error("An error occurred while retrieving reports")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<IEnumerable<ReportDto>>> GetReportsByItemAsync(int itemId)
+        {
+            try
+            {
+                if (itemId <= 0)
+                {
+                    return Result.Fail(new Error("Valid item ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var reports = await _marketplaceRepository.GetReportsByItemAsync(itemId);
+                return Result.Ok(reports.Select(MapToReportDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving reports for item {ItemId}", itemId);
+                return Result.Fail(new Error("An error occurred while retrieving item reports")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<bool>> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null)
+        {
+            try
+            {
+                if (reportId <= 0 || adminUserId <= 0)
+                {
+                    return Result.Fail(new Error("Valid report ID and admin user ID are required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var result = await _marketplaceRepository.UpdateReportStatusAsync(reportId, status, adminUserId, adminNotes);
+                await _marketplaceRepository.SaveChangesAsync();
+
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating report status");
+                return Result.Fail(new Error("An error occurred while updating report status")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<List<MarketplaceItemDto>>> GetUserItemsAsync(int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid user ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var itemsResult = await GetItemsBySellerAsync(userId);
+                if (itemsResult.IsFailed)
+                {
+                    return Result.Fail(itemsResult.Errors);
+                }
+
+                return Result.Ok(itemsResult.Value.ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user items for userId: {UserId}", userId);
+                return Result.Fail(new Error("An error occurred while retrieving user items")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<List<MarketplaceItemDto>>> GetUserWishlistAsync(int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid user ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var items = await _marketplaceRepository.GetUserWishlistAsync(userId);
+                var itemDtos = new List<MarketplaceItemDto>();
+
+                foreach (var item in items)
+                {
+                    var dto = MapToDto(item);
+                    dto.IsLiked = true;
+                    dto.TimeAgo = GetTimeAgo(item.CreatedDate);
+                    itemDtos.Add(dto);
+                }
+
+                return Result.Ok(itemDtos.OrderByDescending(x => x.CreatedDate).ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user wishlist for userId: {UserId}", userId);
+                return Result.Fail(new Error("An error occurred while retrieving wishlist")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<int>> GetUserWishlistCountAsync(int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid user ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var count = await _marketplaceRepository.GetUserWishlistCountAsync(userId);
+                return Result.Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting wishlist count for userId: {UserId}", userId);
+                return Result.Fail(new Error("An error occurred while retrieving wishlist count")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<bool>> RemoveFromWishlistAsync(int itemId, int userId)
+        {
+            try
+            {
+                var validation = ValidationHelper.ValidateItemStatusOperation(new ItemStatusOperationDto
+                {
+                    ItemId = itemId,
+                    UserId = userId
+                });
+
+                if (!validation.IsValid)
+                {
+                    return Result.Fail(new Error(string.Join("; ", validation.Errors))
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var result = await _marketplaceRepository.RemoveFromWishlistAsync(itemId, userId);
+
+                if (!result)
+                {
+                    return Result.Fail(new Error("Item not found in wishlist")
+                        .WithMetadata("StatusCode", 404));
+                }
+
+                await _marketplaceRepository.SaveChangesAsync();
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing item from wishlist");
+                return Result.Fail(new Error("An error occurred while removing item from wishlist")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        public async Task<Result<UserStatsDto>> GetUserStatsAsync(int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return Result.Fail(new Error("Valid user ID is required")
+                        .WithMetadata("StatusCode", 400));
+                }
+
+                var itemsResult = await GetItemsBySellerAsync(userId);
+                if (itemsResult.IsFailed)
+                {
+                    return Result.Fail(itemsResult.Errors);
+                }
+
+                var itemsList = itemsResult.Value.ToList();
+
+                var stats = new UserStatsDto
+                {
+                    TotalListings = itemsList.Count,
+                    ActiveListings = itemsList.Count(x => x.Status == MarketplaceItemStatus.Active),
+                    SoldItems = itemsList.Count(x => x.Status == MarketplaceItemStatus.Sold)
+                };
+
+                return Result.Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user stats for userId: {UserId}", userId);
+                return Result.Fail(new Error("An error occurred while retrieving user statistics")
+                    .WithMetadata("StatusCode", 500)
+                    .CausedBy(ex));
+            }
+        }
+
+        // Private helper methods remain the same
         private static MarketplaceItemDto MapToDto(MarketplaceItem item)
         {
             return new MarketplaceItemDto
@@ -389,13 +713,13 @@ namespace CampusHub.Application.Services
             return new ReportDto
             {
                 Id = report.Id,
-                MarketplaceItemId = report.MarketplaceItemId,  
-                ReporterId = report.ReporterUserID,            
+                MarketplaceItemId = report.MarketplaceItemId,
+                ReporterId = report.ReporterUserID,
                 Reason = report.Reason,
                 Description = report.Description,
                 Status = report.Status.ToString(),
                 CreatedAt = report.CreatedAt,
-                AdminNotes = report.AdminNotes,                
+                AdminNotes = report.AdminNotes,
                 AdminUserId = report.ResolvedByUserId
             };
         }

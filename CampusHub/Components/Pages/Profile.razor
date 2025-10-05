@@ -778,36 +778,62 @@
         {
             if (currentUser != null)
             {
-                userListings = await MarketplaceService.GetUserListingsAsync(currentUser.Id);
+                // Get the Result wrapper
+                var result = await MarketplaceService.GetUserListingsAsync(currentUser.Id);
 
-                if (userListings.Any())
+                // Check if the operation was successful
+                if (result.IsSuccess)
                 {
-                    activeListings = userListings.Where(listing =>
-                    {
-                        var numericStatus = Convert.ToInt32(listing.Status);
-                        return numericStatus == (int)MarketplaceItemStatus.Active ||
-                               numericStatus == 0;
-                    }).ToList();
+                    userListings = result.Value; // Extract the actual list from Result
 
-                    soldListings = userListings.Where(listing =>
+                    if (userListings.Any())
                     {
-                        var numericStatus = Convert.ToInt32(listing.Status);
-                        return numericStatus == (int)MarketplaceItemStatus.Sold;
-                    }).ToList();
+                        activeListings = userListings.Where(listing =>
+                        {
+                            var numericStatus = Convert.ToInt32(listing.Status);
+                            return numericStatus == (int)MarketplaceItemStatus.Active ||
+                                   numericStatus == 0;
+                        }).ToList();
+
+                        soldListings = userListings.Where(listing =>
+                        {
+                            var numericStatus = Convert.ToInt32(listing.Status);
+                            return numericStatus == (int)MarketplaceItemStatus.Sold;
+                        }).ToList();
+                    }
+                    else
+                    {
+                        activeListings = new List<MarketplaceItemDto>();
+                        soldListings = new List<MarketplaceItemDto>();
+                    }
+
+                    soldItemsCount = soldListings?.Count ?? 0;
                 }
                 else
                 {
+                    // Handle failure case
+                    var error = result.Errors.FirstOrDefault();
+                    listingErrorMessage = error?.Message ?? "Failed to load listings";
+                    Console.WriteLine($"Error loading listings: {listingErrorMessage}");
+
+                    // Initialize empty lists
+                    userListings = new List<MarketplaceItemDto>();
                     activeListings = new List<MarketplaceItemDto>();
                     soldListings = new List<MarketplaceItemDto>();
+                    soldItemsCount = 0;
                 }
-
-                soldItemsCount = soldListings?.Count ?? 0;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading listings: {ex.Message}");
             listingErrorMessage = $"Error loading listings: {ex.Message}";
+
+            // Initialize empty lists on exception
+            userListings = new List<MarketplaceItemDto>();
+            activeListings = new List<MarketplaceItemDto>();
+            soldListings = new List<MarketplaceItemDto>();
+            soldItemsCount = 0;
         }
     }
 
@@ -817,8 +843,17 @@
         {
             if (currentUser != null)
             {
-                likedItems = await MarketplaceService.GetUserWishlistAsync(currentUser.Id);
-                availableLikedItems = likedItems.Count(item => item.Status == MarketplaceItemStatus.Active);
+                var result = await MarketplaceService.GetUserWishlistAsync(currentUser.Id);
+
+                if (result.IsSuccess)
+                {
+                    likedItems = result.Value;
+                    availableLikedItems = likedItems.Count(item => item.Status == MarketplaceItemStatus.Active);
+                }
+                else
+                {
+                    likedErrorMessage = result.Errors.FirstOrDefault()?.Message ?? "Error loading liked items";
+                }
             }
         }
         catch (Exception ex)
@@ -834,15 +869,13 @@
         {
             if (currentUser != null)
             {
-                var success = await MarketplaceService.RemoveFromWishlistAsync(itemId, currentUser.Id);
+                var result = await MarketplaceService.RemoveFromWishlistAsync(itemId, currentUser.Id);
 
-                if (success)
+                if (result.IsSuccess && result.Value)
                 {
                     likedItems = likedItems.Where(item => item.Id != itemId).ToList();
                     availableLikedItems = likedItems.Count(item => item.Status == MarketplaceItemStatus.Active);
-
                     likedSuccessMessage = "Item removed from your liked items!";
-
                     _ = Task.Delay(3000).ContinueWith(_ =>
                     {
                         likedSuccessMessage = null;
@@ -851,9 +884,10 @@
                 }
                 else
                 {
-                    likedErrorMessage = "Failed to remove item from liked items. Please try again.";
+                    likedErrorMessage = result.IsSuccess
+                        ? "Failed to remove item from liked items. Please try again."
+                        : result.Errors.First().Message;
                 }
-
                 StateHasChanged();
             }
         }
@@ -942,10 +976,10 @@
         try
         {
             Console.WriteLine("Calling UpdateUserProfileAsync");
-            var success = await UserService.UpdateUserProfileAsync(editUser);
-            Console.WriteLine($"UpdateUserProfileAsync result: {success}");
+            var updateResult = await UserService.UpdateUserProfileAsync(editUser);
+            Console.WriteLine($"UpdateUserProfileAsync result: {updateResult.IsSuccess}");
 
-            if (success)
+            if (updateResult.IsSuccess && updateResult.Value)
             {
                 currentUser!.FullName = editUser.FullName;
                 currentUser.StudentNumber = editUser.StudentNumber;
@@ -971,7 +1005,7 @@
             }
             else
             {
-                errorMessage = "Failed to update profile. Please try again.";
+                errorMessage = updateResult.Errors.FirstOrDefault()?.Message ?? "Failed to update profile. Please try again.";
             }
         }
         catch (Exception ex)
@@ -1243,9 +1277,9 @@
 
         try
         {
-            var success = await MarketplaceService.DeleteItemAsync(listingId, currentUser.Id);
+            var deleteResult = await MarketplaceService.DeleteItemAsync(listingId, currentUser.Id);
 
-            if (success)
+            if (deleteResult.IsSuccess && deleteResult.Value)
             {
                 listingSuccessMessage = "Listing deleted successfully!";
                 activeListings = activeListings.Where(l => l.Id != listingId).ToList();
@@ -1261,7 +1295,9 @@
             }
             else
             {
-                listingErrorMessage = "Failed to delete listing. Please try again.";
+                listingErrorMessage = deleteResult.IsSuccess
+                    ? "Failed to delete listing. Please try again."
+                    : deleteResult.Errors.First().Message;
             }
         }
         catch (Exception ex)

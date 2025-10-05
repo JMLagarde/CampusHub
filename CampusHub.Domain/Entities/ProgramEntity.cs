@@ -15,6 +15,7 @@ namespace CampusHub.Domain.Entities
         // Navigation
         public College? College { get; set; }
         public List<User> Users { get; set; } = new();
+        public List<Event> Events { get; set; } = new();
     }
 }
 

@@ -1,16 +1,14 @@
 ﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
-using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CampusHub.Infrastructure.Repositories
+namespace CampusHub.Application.Repositories
 {
     public class UserRepository : IUserRepository
     {
-        // task result 
-        private readonly ApplicationDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public UserRepository(ApplicationDbContext context)
+        public UserRepository(IApplicationDbContext context)
         {
             _context = context;
         }
@@ -63,16 +61,14 @@ namespace CampusHub.Infrastructure.Repositories
                 .OrderBy(u => u.FullName)
                 .ToListAsync();
         }
+
         public async Task<bool> UpdateAsync(User user)
         {
             try
             {
                 user.UpdatedAt = DateTime.UtcNow;
-
                 _context.Users.Update(user);
-
                 var result = await _context.SaveChangesAsync();
-
                 return result > 0;
             }
             catch (Exception ex)
@@ -81,6 +77,7 @@ namespace CampusHub.Infrastructure.Repositories
                 return false;
             }
         }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

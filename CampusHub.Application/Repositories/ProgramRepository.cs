@@ -1,15 +1,14 @@
 ﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
-using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CampusHub.Infrastructure.Repositories
+namespace CampusHub.Application.Repositories
 {
     public class ProgramRepository : IProgramRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public ProgramRepository(ApplicationDbContext context)
+        public ProgramRepository(IApplicationDbContext context)
         {
             _context = context;
         }

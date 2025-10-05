@@ -146,7 +146,6 @@
             Console.WriteLine($"Error loading dropdown data: {ex.Message}");
         }
     }
-
     private async Task HandleValidSubmit()
     {
         try
@@ -155,18 +154,18 @@
             errorMessage = "";
             successMessage = "";
 
-            var userId = await UserService.CreateUserAsync(student);
+            var result = await UserService.CreateUserAsync(student);
 
-            if (userId > 0)
+            if (result.IsSuccess)
             {
                 successMessage = "Registration successful! Redirecting to login...";
-
                 await Task.Delay(2000);
                 Navigation.NavigateTo("/");
             }
             else
             {
-                errorMessage = "Registration failed. Please try again.";
+                // Extract the error message from the Result
+                errorMessage = result.Errors.FirstOrDefault()?.Message ?? "Registration failed. Please try again.";
             }
         }
         catch (Exception ex)
