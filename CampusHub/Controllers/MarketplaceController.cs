@@ -113,29 +113,6 @@ namespace CampusHub.Presentation.Controllers
             return Ok(filteredItems);
         }
 
-        [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> SearchItems([FromQuery] string searchTerm, [FromQuery] int? userId = null)
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-            {
-                return BadRequest(new { message = "Search term is required" });
-            }
-
-            var allItemsResult = await _marketplaceService.GetAllItemsAsync(userId);
-
-            if (allItemsResult.IsFailed)
-            {
-                return allItemsResult.ToActionResult();
-            }
-
-            var searchResults = allItemsResult.Value.Where(i =>
-                i.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                i.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-            ).OrderByDescending(x => x.CreatedDate);
-
-            return Ok(searchResults);
-        }
-
         [HttpGet("wishlist/{userId}")]
         public async Task<ActionResult<IEnumerable<MarketplaceItemDto>>> GetUserWishlist(int userId)
         {

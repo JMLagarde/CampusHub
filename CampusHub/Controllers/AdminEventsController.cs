@@ -1,4 +1,5 @@
 ﻿using CampusHub.Application.DTOs;
+using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -110,7 +111,7 @@ namespace CampusHub.API.Controllers
         public async Task<IActionResult> GetPrograms()
         {
             var programs = await _context.Programs
-                .Select(p => new ProgramDto
+                .Select(p => new AdminProgramDto
                 {
                     Id = p.Id,
                     Name = p.Name,
@@ -126,7 +127,7 @@ namespace CampusHub.API.Controllers
         {
             var programs = await _context.Programs
                 .Where(p => p.CollegeId == collegeId)
-                .Select(p => new ProgramDto
+                .Select(p => new AdminProgramDto
                 {
                     Id = p.Id,
                     Name = p.Name,
@@ -136,18 +137,5 @@ namespace CampusHub.API.Controllers
 
             return Ok(programs);
         }
-    }
-
-    public class CollegeDto
-    {
-        public int CollegeId { get; set; }
-        public string CollegeName { get; set; } = string.Empty;
-    }
-
-    public class ProgramDto
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int CollegeId { get; set; }
     }
 }

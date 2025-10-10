@@ -3,7 +3,6 @@ using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using FluentResults;
 using Microsoft.Extensions.Logging;
-using System.IO;
 
 namespace CampusHub.Application.Services
 {
