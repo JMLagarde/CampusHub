@@ -1,4 +1,4 @@
-﻿using CampusHub.Domain.Entities;
+using CampusHub.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using CampusHub.Application.Interfaces;
 
@@ -19,6 +19,7 @@ namespace CampusHub.Infrastructure.Data
         public DbSet<MarketplaceLike> MarketplaceLikes { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<Event> Events { get; set; }
+        public DbSet<EventBookmark> EventBookmarks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +33,7 @@ namespace CampusHub.Infrastructure.Data
             ConfigureMarketplaceLikeEntity(modelBuilder);
             ConfigureReportEntity(modelBuilder);
             ConfigureEventEntity(modelBuilder);
+            ConfigureEventBookmarkEntity(modelBuilder);
 
             DatabaseSeeder.SeedData(modelBuilder);
         }
@@ -162,18 +164,21 @@ namespace CampusHub.Infrastructure.Data
                 entity.Property(e => e.CampusLocation)
                       .HasConversion<int>()
                       .IsRequired();
+                entity.Property(e => e.Status)
+                      .HasConversion<int>()
+                      .IsRequired();
                 entity.Property(e => e.Location).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.ImagePath).HasMaxLength(500);
                 entity.Property(e => e.Priority).HasMaxLength(20);
                 entity.Property(e => e.Type).HasMaxLength(50);
                 entity.HasOne(e => e.College)
-                      .WithMany() 
+                      .WithMany()
                       .HasForeignKey(e => e.CollegeId)
                       .HasPrincipalKey(c => c.CollegeId)
                       .IsRequired()
                       .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Program)
-                      .WithMany() 
+                      .WithMany()
                       .HasForeignKey(e => e.ProgramId)
                       .HasPrincipalKey(p => p.Id)
                       .OnDelete(DeleteBehavior.SetNull);
@@ -183,63 +188,38 @@ namespace CampusHub.Infrastructure.Data
                       .HasForeignKey(e => e.OrganizerId)
                       .OnDelete(DeleteBehavior.SetNull);
 
+                entity.HasMany(e => e.EventBookmarks)
+                      .WithOne(eb => eb.Event)
+                      .HasForeignKey(eb => eb.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasIndex(e => e.CollegeId);
                 entity.HasIndex(e => e.ProgramId);
                 entity.HasIndex(e => e.CampusLocation);
-                entity.HasIndex(e => e.Date);
+                entity.HasIndex(e => e.StartDate);
                 entity.HasIndex(e => e.CreatedAt);
             });
+        }
 
-            modelBuilder.Entity<Event>().HasData(
-                new Event
-                {
-                    Id = 1,
-                    Title = "Midterm Exam",
-                    Description = "Prepare for your upcoming midterm exams with focus and dedication. Aim for an A+! Don't forget to review and study well. Good luck to all students!",
-                    CollegeId = 1,
-                    ProgramId = 4,
-                    CampusLocation = CampusLocation.Congressional,
-                    Date = new DateTime(2025, 10, 4),
-                    Location = "Various Classrooms",
-                    ImagePath = "midterm-exam.jpg",
-                    Priority = "High",
-                    Type = "Academic",
-                    InterestedCount = 400,
-                    CreatedAt = new DateTime(2025, 10, 1, 10, 0, 0)
-                },
-                new Event
-                {
-                    Id = 2,
-                    Title = "Mindscape Metrics 2: The Ledgerlore Odyssey: Rise of the Crown",
-                    Description = "An exciting event hosted by JPIA-UCC South. Oct 7-8, 2025. Accountancy challenges and workshops.",
-                    CollegeId = 1,
-                    ProgramId = 1,
-                    CampusLocation = CampusLocation.MainCampus,
-                    Date = new DateTime(2025, 10, 7),
-                    Location = "UCC South Campus",
-                    ImagePath = "mindscape-metrics2.jpg",
-                    Priority = "Medium",
-                    Type = "Academic",
-                    InterestedCount = 300,
-                    CreatedAt = new DateTime(2025, 10, 2, 22, 0, 0)
-                },
-                new Event
-                {
-                    Id = 3,
-                    Title = "CSD Fair 2025",
-                    Description = "UCC Computer Studies presents CSD Fair 2025: Bringing Youth to Technology Excellence. Oct 8-9, 2025.",
-                    CollegeId = 6,
-                    ProgramId = 30,
-                    CampusLocation = CampusLocation.MainCampus,
-                    Date = new DateTime(2025, 10, 8),
-                    Location = "Computer Studies Building",
-                    ImagePath = "csd-fair-2025.jpg",
-                    Priority = "Medium",
-                    Type = "Academic",
-                    InterestedCount = 250,
-                    CreatedAt = new DateTime(2025, 10, 3, 22, 0, 0)
-                }
-            );
+        private void ConfigureEventBookmarkEntity(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<EventBookmark>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
+
+                entity.HasOne(e => e.Event)
+                    .WithMany(e => e.EventBookmarks)
+                    .HasForeignKey(e => e.EventId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.CreatedAt);
+            });
         }
     }
 }

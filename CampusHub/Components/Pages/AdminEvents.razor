@@ -2,6 +2,7 @@
 @layout Layout.AdminLayout
 @using CampusHub.Application.DTO
 @using CampusHub.Application.DTOs
+@using CampusHub.Domain.Entities
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
@@ -41,17 +42,53 @@
         <table class="w-full text-left text-xs text-gray-600 border-separate border-spacing-y-2">
             <thead>
                 <tr class="border-b border-gray-200">
-                    <th class="pb-2 font-semibold">Event</th>
-                    <th class="pb-2 font-semibold">College</th>
-                    <th class="pb-2 font-semibold">Category</th>
-                    <th class="pb-2 font-semibold">Priority</th>
-                    <th class="pb-2 font-semibold">Date</th>
-                    <th class="pb-2 font-semibold">Attendees</th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("Title")'>
+                        <div class="flex items-center gap-1">
+                            Event
+                            <i class="fas @GetSortIcon("Title")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("College")'>
+                        <div class="flex items-center gap-1">
+                            College
+                            <i class="fas @GetSortIcon("College")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("Type")'>
+                        <div class="flex items-center gap-1">
+                            Category
+                            <i class="fas @GetSortIcon("Type")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("Status")'>
+                        <div class="flex items-center gap-1">
+                            Status
+                            <i class="fas @GetSortIcon("Status")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("Priority")'>
+                        <div class="flex items-center gap-1">
+                            Priority
+                            <i class="fas @GetSortIcon("Priority")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("StartDate")'>
+                        <div class="flex items-center gap-1">
+                            Date
+                            <i class="fas @GetSortIcon("StartDate")"></i>
+                        </div>
+                    </th>
+                    <th class="pb-2 font-semibold cursor-pointer hover:text-gray-900" @onclick='() => SortBy("InterestedCount")'>
+                        <div class="flex items-center gap-1">
+                            Attendees
+                            <i class="fas @GetSortIcon("InterestedCount")"></i>
+                        </div>
+                    </th>
                     <th class="pb-2 font-semibold">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-                @foreach (var evt in events)
+                @foreach (var evt in sortedEvents)
                 {
                     <tr>
                         <td class="py-2 pr-6">
@@ -65,11 +102,16 @@
                         </td>
                         <td class="py-2 pr-6">@evt.Type</td>
                         <td class="py-2 pr-6">
+                            <span class="@GetStatusBadgeClass(evt.Status)">
+                                @evt.Status.ToString()
+                            </span>
+                        </td>
+                        <td class="py-2 pr-6">
                             <span class="@GetPriorityBadgeClass(evt.Priority)">
                                 @evt.Priority.ToLower()
                             </span>
                         </td>
-                        <td class="py-2 pr-6">@evt.Date.ToString("MMMM dd, yyyy")</td>
+                        <td class="py-2 pr-6">@evt.StartDate.ToString("MMMM dd, yyyy")</td>
                         <td class="py-2 pr-6 flex items-center gap-1">
                             <i class="fas fa-user-friends text-gray-400 text-[12px]"></i>
                             @evt.InterestedCount
@@ -162,18 +204,24 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-900 mb-1">Event Date</label>
-                                <InputDate @bind-Value="eventForm.Date" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
-                                <ValidationMessage For="@(() => eventForm.Date)" class="text-red-600 text-xs mt-1" />
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Start Date</label>
+                                <InputDate @bind-Value="eventForm.StartDate" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                                <ValidationMessage For="@(() => eventForm.StartDate)" class="text-red-600 text-xs mt-1" />
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-900 mb-1">Registration Deadline</label>
-                                <InputDate @bind-Value="eventForm.RegistrationDeadline" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">End Date</label>
+                                <InputDate @bind-Value="eventForm.EndDate" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                                <ValidationMessage For="@(() => eventForm.EndDate)" class="text-red-600 text-xs mt-1" />
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1">Registration Deadline</label>
+                            <InputDate @bind-Value="eventForm.RegistrationDeadline" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-900 mb-1">Priority</label>
                                 <InputSelect @bind-Value="eventForm.Priority" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
@@ -187,6 +235,15 @@
                                 <label class="block text-sm font-semibold text-gray-900 mb-1">Event Type</label>
                                 <InputText @bind-Value="eventForm.Type" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="e.g., Academic, Career" />
                                 <ValidationMessage For="@(() => eventForm.Type)" class="text-red-600 text-xs mt-1" />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Status</label>
+                                <InputSelect @bind-Value="eventForm.Status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="Upcoming">Upcoming</option>
+                                    <option value="Ongoing">Ongoing</option>
+                                    <option value="Ended">Ended</option>
+                                </InputSelect>
                             </div>
                         </div>
 
@@ -249,10 +306,36 @@
     private string selectedFileName = string.Empty;
     private string imagePreviewUrl = string.Empty;
 
+    // Sorting properties
+    private string currentSortColumn = "StartDate";
+    private bool isAscending = false;
+
     private IEnumerable<AdminProgramDto> filteredPrograms =>
         eventForm.CollegeId > 0
             ? programs.Where(p => p.CollegeId == eventForm.CollegeId)
             : programs;
+
+    private IEnumerable<EventDto> sortedEvents
+    {
+        get
+        {
+            var sorted = events.AsEnumerable();
+
+            sorted = currentSortColumn switch
+            {
+                "Title" => isAscending ? sorted.OrderBy(e => e.Title) : sorted.OrderByDescending(e => e.Title),
+                "College" => isAscending ? sorted.OrderBy(e => e.CollegeName) : sorted.OrderByDescending(e => e.CollegeName),
+                "Type" => isAscending ? sorted.OrderBy(e => e.Type) : sorted.OrderByDescending(e => e.Type),
+                "Status" => isAscending ? sorted.OrderBy(e => e.Status) : sorted.OrderByDescending(e => e.Status),
+                "Priority" => isAscending ? sorted.OrderBy(e => GetPriorityOrder(e.Priority)) : sorted.OrderByDescending(e => GetPriorityOrder(e.Priority)),
+                "StartDate" => isAscending ? sorted.OrderBy(e => e.StartDate) : sorted.OrderByDescending(e => e.StartDate),
+                "InterestedCount" => isAscending ? sorted.OrderBy(e => e.InterestedCount) : sorted.OrderByDescending(e => e.InterestedCount),
+                _ => sorted.OrderByDescending(e => e.StartDate)
+            };
+
+            return sorted;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -278,12 +361,58 @@
         }
     }
 
+    private void SortBy(string column)
+    {
+        if (currentSortColumn == column)
+        {
+            isAscending = !isAscending;
+        }
+        else
+        {
+            currentSortColumn = column;
+            isAscending = true;
+        }
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (currentSortColumn != column)
+            return "fa-sort text-gray-300";
+
+        return isAscending ? "fa-sort-up text-[#7ED957]" : "fa-sort-down text-[#7ED957]";
+    }
+
+
+
+    private string GetStatusBadgeClass(EventStatus status)
+    {
+        return status switch
+        {
+            EventStatus.Upcoming => "inline-block px-2 py-0.5 text-[10px] font-semibold text-blue-700 bg-blue-100 rounded-full",
+            EventStatus.Ongoing => "inline-block px-2 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded-full",
+            EventStatus.Ended => "inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-200 rounded-full",
+            _ => "inline-block px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-200 rounded-full"
+        };
+    }
+
+    private int GetPriorityOrder(string priority)
+    {
+        return priority?.ToLower() switch
+        {
+            "high" => 3,
+            "medium" => 2,
+            "low" => 1,
+            _ => 0
+        };
+    }
+
     private void OpenCreateModal()
     {
         isEditMode = false;
         eventForm = new EventFormDto
         {
-            Date = DateTime.Now.AddDays(7),
+            StartDate = DateTime.Now.AddDays(7),
+            EndDate = DateTime.Now.AddDays(7).AddHours(1),
             CampusLocationId = 1,
             Priority = "Medium"
         };
@@ -304,13 +433,15 @@
             CollegeId = evt.CollegeId,
             ProgramId = evt.ProgramId,
             CampusLocationId = evt.CampusLocationId,
-            Date = evt.Date,
+            StartDate = evt.StartDate,
+            EndDate = evt.EndDate,
             RegistrationDeadline = evt.RegistrationDeadline,
             Location = evt.Location,
             ImagePath = evt.ImagePath,
             Priority = evt.Priority,
             Type = evt.Type,
-            InterestedCount = evt.InterestedCount
+            InterestedCount = evt.InterestedCount,
+            Status = evt.Status
         };
         selectedFileName = !string.IsNullOrEmpty(evt.ImagePath) ? Path.GetFileName(evt.ImagePath) : string.Empty;
         imagePreviewUrl = !string.IsNullOrEmpty(evt.ImagePath) ? evt.ImagePath : string.Empty;
@@ -353,7 +484,6 @@
             isUploading = true;
             selectedFileName = file.Name;
 
-            // Upload to server WITHOUT creating preview
             var content = new MultipartFormDataContent();
             var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
@@ -367,7 +497,7 @@
                 if (result != null && !string.IsNullOrEmpty(result.ImagePath))
                 {
                     eventForm.ImagePath = result.ImagePath;
-                    imagePreviewUrl = result.ImagePath; 
+                    imagePreviewUrl = result.ImagePath;
                 }
                 else
                 {
@@ -402,13 +532,15 @@
                 CollegeId = eventForm.CollegeId,
                 ProgramId = eventForm.ProgramId,
                 CampusLocationId = eventForm.CampusLocationId,
-                Date = eventForm.Date,
+                StartDate = eventForm.StartDate,
+                EndDate = eventForm.EndDate,
                 RegistrationDeadline = eventForm.RegistrationDeadline,
                 Location = eventForm.Location,
                 ImagePath = eventForm.ImagePath,
                 Priority = eventForm.Priority,
                 Type = eventForm.Type,
-                InterestedCount = eventForm.InterestedCount
+                InterestedCount = eventForm.InterestedCount,
+                Status = eventForm.Status
             };
 
             HttpResponseMessage response;

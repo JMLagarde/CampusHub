@@ -64,12 +64,10 @@ namespace CampusHub.Application.Services
                     await file.CopyToAsync(stream);
                 }
 
-                // FIXED: Return JUST the filename (no path prefix!)
-                // Log the full relative path if needed for debugging
                 var relativePathForLog = $"/uploads/events/{uniqueFileName}";
                 _logger.LogInformation("Image uploaded successfully: {FileName} -> {RelativePath}", file.FileName, relativePathForLog);
 
-                return Result.Ok(uniqueFileName);  // e.g., "a52ff62f-3d5b-4336-a553-8a385025ee55.jpg"
+                return Result.Ok(uniqueFileName);  
             }
             catch (Exception ex)
             {
@@ -301,8 +299,11 @@ namespace CampusHub.Application.Services
             if (string.IsNullOrWhiteSpace(dto.Location))
                 errors.Add("Event location is required");
 
-            if (dto.Date == default)
-                errors.Add("Event date is required");
+            if (dto.StartDate == default)
+                errors.Add("Event start date is required");
+
+            if (dto.EndDate == default)
+                errors.Add("Event end date is required");
 
             if (string.IsNullOrWhiteSpace(dto.Type))
                 errors.Add("Event type is required");
@@ -321,12 +322,14 @@ namespace CampusHub.Application.Services
             existingEvent.CollegeId = dto.CollegeId;
             existingEvent.ProgramId = dto.ProgramId;
             existingEvent.CampusLocation = (CampusLocation)dto.CampusLocationId;
-            existingEvent.Date = dto.Date;
+            existingEvent.StartDate = dto.StartDate;
+            existingEvent.EndDate = dto.EndDate;
             existingEvent.RegistrationDeadline = dto.RegistrationDeadline;
             existingEvent.Location = dto.Location;
             existingEvent.ImagePath = dto.ImagePath;
             existingEvent.Priority = dto.Priority;
             existingEvent.Type = dto.Type;
+            existingEvent.Status = dto.Status;
         }
 
         private static string GetCampusLocationName(CampusLocation loc)
@@ -354,8 +357,10 @@ namespace CampusHub.Application.Services
                 ProgramName = evt.Program?.Name,
                 CampusLocationId = (int)evt.CampusLocation,
                 CampusLocationName = GetCampusLocationName(evt.CampusLocation),
-                Date = evt.Date,
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
                 RegistrationDeadline = evt.RegistrationDeadline,
+                Status = evt.Status,
                 Location = evt.Location,
                 ImagePath = evt.ImagePath,
                 Priority = evt.Priority,
@@ -375,12 +380,14 @@ namespace CampusHub.Application.Services
                 CollegeId = dto.CollegeId,
                 ProgramId = dto.ProgramId,
                 CampusLocation = (CampusLocation)dto.CampusLocationId,
-                Date = dto.Date,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
                 RegistrationDeadline = dto.RegistrationDeadline,
                 Location = dto.Location,
                 ImagePath = dto.ImagePath,
                 Priority = dto.Priority,
                 Type = dto.Type,
+                Status = dto.Status,
                 InterestedCount = 0
             };
         }

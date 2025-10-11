@@ -11,5 +11,8 @@ namespace CampusHub.Application.Interfaces
         Task<Result<Event>> CreateAsync(Event evt);
         Task<Result<Event>> UpdateAsync(Event evt);
         Task<Result> DeleteAsync(int id);
+        Task<List<int>> GetBookmarkedEventIdsAsync(int userId);
+        Task<bool> ToggleBookmarkAsync(int eventId, int userId);
+        Task<Result<List<Event>>> GetBookmarkedEventsAsync(int userId);
     }
 }

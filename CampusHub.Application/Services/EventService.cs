@@ -17,7 +17,7 @@ namespace CampusHub.Application.Services
             _logger = logger;
         }
 
-        public async Task<Result<List<EventDto>>> GetAllEventsAsync()
+        public async Task<Result<List<EventDto>>> GetAllEventsAsync(int? userId = null)
         {
             try
             {
@@ -25,7 +25,8 @@ namespace CampusHub.Application.Services
                 if (result.IsFailed)
                     return Result.Fail<List<EventDto>>(result.Errors);
 
-                var dtos = result.Value.Select(MapToDto).ToList();
+                var bookmarkedIds = userId.HasValue ? await _eventRepository.GetBookmarkedEventIdsAsync(userId.Value) : new List<int>();
+                var dtos = result.Value.Select(evt => MapToDto(evt, bookmarkedIds.Contains(evt.Id))).ToList();
                 return Result.Ok(dtos);
             }
             catch (Exception ex)
@@ -43,7 +44,7 @@ namespace CampusHub.Application.Services
                 if (result.IsFailed)
                     return Result.Fail<EventDto>(result.Errors);
 
-                return Result.Ok(MapToDto(result.Value));
+                return Result.Ok(MapToDto(result.Value, false));
             }
             catch (Exception ex)
             {
@@ -60,7 +61,7 @@ namespace CampusHub.Application.Services
                 if (result.IsFailed)
                     return Result.Fail<List<EventDto>>(result.Errors);
 
-                var dtos = result.Value.Select(MapToDto).ToList();
+                var dtos = result.Value.Select(evt => MapToDto(evt, false)).ToList();
                 return Result.Ok(dtos);
             }
             catch (Exception ex)
@@ -81,7 +82,7 @@ namespace CampusHub.Application.Services
                     return Result.Fail<EventDto>(result.Errors);
 
                 _logger.LogInformation("Created event {EventId}", result.Value.Id);
-                return Result.Ok(MapToDto(result.Value));
+                return Result.Ok(MapToDto(result.Value, false));
             }
             catch (Exception ex)
             {
@@ -108,7 +109,8 @@ namespace CampusHub.Application.Services
 
                 existingEvent.CampusLocation = (CampusLocation)eventDto.CampusLocationId;
 
-                existingEvent.Date = eventDto.Date;
+                existingEvent.StartDate = eventDto.StartDate;
+                existingEvent.EndDate = eventDto.EndDate;
                 existingEvent.RegistrationDeadline = eventDto.RegistrationDeadline;
 
                 existingEvent.Location = eventDto.Location;
@@ -116,13 +118,14 @@ namespace CampusHub.Application.Services
 
                 existingEvent.Priority = eventDto.Priority;
                 existingEvent.Type = eventDto.Type;
+                existingEvent.Status = eventDto.Status;
 
                 var updateResult = await _eventRepository.UpdateAsync(existingEvent);
                 if (updateResult.IsFailed)
                     return Result.Fail<EventDto>(updateResult.Errors);
 
                 _logger.LogInformation("Updated event {EventId}", id);
-                return Result.Ok(MapToDto(updateResult.Value));
+                return Result.Ok(MapToDto(updateResult.Value, false));
             }
             catch (Exception ex)
             {
@@ -149,20 +152,18 @@ namespace CampusHub.Application.Services
             }
         }
 
-        public async Task<Result> ToggleBookmarkEventAsync(int eventId, int userId)
+        public async Task<Result<bool>> ToggleBookmarkEventAsync(int eventId, int userId)
         {
             try
             {
-                var eventResult = await _eventRepository.GetByIdAsync(eventId);
-                if (eventResult.IsFailed)
-                    return Result.Fail(eventResult.Errors);
-                _logger.LogInformation("Bookmark toggled for user {User Id} on event {EventId} (TODO: Implement full logic)", userId, eventId);
-                return Result.Ok();
+                var isBookmarked = await _eventRepository.ToggleBookmarkAsync(eventId, userId);
+                _logger.LogInformation("Bookmark toggled for user {UserId} on event {EventId}: {IsBookmarked}", userId, eventId, isBookmarked);
+                return Result.Ok(isBookmarked);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to toggle bookmark for event {EventId}, user {User Id}", eventId, userId);
-                return Result.Fail($"Failed to toggle bookmark: {ex.Message}");
+                _logger.LogError(ex, "Failed to toggle bookmark for event {EventId}, user {UserId}", eventId, userId);
+                return Result.Fail<bool>($"Failed to toggle bookmark: {ex.Message}");
             }
         }
 
@@ -192,6 +193,24 @@ namespace CampusHub.Application.Services
             }
         }
 
+        public async Task<Result<List<EventDto>>> GetBookmarkedEventsAsync(int userId)
+        {
+            try
+            {
+                var result = await _eventRepository.GetBookmarkedEventsAsync(userId);
+                if (result.IsFailed)
+                    return Result.Fail<List<EventDto>>(result.Errors);
+
+                var dtos = result.Value.Select(evt => MapToDto(evt, true)).ToList(); // all are bookmarked
+                return Result.Ok(dtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve bookmarked events for user {UserId}", userId);
+                return Result.Fail<List<EventDto>>($"Failed to retrieve bookmarked events: {ex.Message}");
+            }
+        }
+
         private static string GetCampusLocationName(CampusLocation loc)
         {
             return loc switch
@@ -204,9 +223,9 @@ namespace CampusHub.Application.Services
             };
         }
 
-        private EventDto MapToDto(Event evt)
+        private EventDto MapToDto(Event evt, bool isBookmarked)
         {
-            var normalizedImagePath = NormalizeImagePath(evt.ImagePath); 
+            var normalizedImagePath = NormalizeImagePath(evt.ImagePath);
 
             return new EventDto
             {
@@ -223,17 +242,19 @@ namespace CampusHub.Application.Services
                 CampusLocationId = (int)evt.CampusLocation,
                 CampusLocationName = GetCampusLocationName(evt.CampusLocation),
 
-                Date = evt.Date,
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                Status = evt.Status,
                 RegistrationDeadline = evt.RegistrationDeadline,
 
                 Location = evt.Location,
-                ImagePath = normalizedImagePath,  
+                ImagePath = normalizedImagePath,
 
                 Priority = evt.Priority,
                 Type = evt.Type,
 
-                InterestedCount = evt.InterestedCount,
-                IsBookmarked = false,  
+                InterestedCount = evt.EventBookmarks?.Count ?? 0,
+                IsBookmarked = isBookmarked,
                 OrganizerName = evt.Organizer?.FullName
             };
         }
@@ -250,15 +271,18 @@ namespace CampusHub.Application.Services
 
                 CampusLocation = (CampusLocation)dto.CampusLocationId,
 
-                Date = dto.Date,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
                 RegistrationDeadline = dto.RegistrationDeadline,
 
                 Location = dto.Location,
-                ImagePath = NormalizeImagePath(dto.ImagePath),  
+                ImagePath = NormalizeImagePath(dto.ImagePath),
 
                 Priority = dto.Priority,
                 Type = dto.Type,
-                InterestedCount = dto.InterestedCount
+                InterestedCount = dto.InterestedCount,
+                Status = dto.Status,
+                CreatedAt = DateTime.UtcNow
             };
         }
 

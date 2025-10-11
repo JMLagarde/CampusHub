@@ -5,13 +5,14 @@ namespace CampusHub.Application.Interfaces
 {
     public interface IEventService
     {
-        Task<Result<List<EventDto>>> GetAllEventsAsync();
+        Task<Result<List<EventDto>>> GetAllEventsAsync(int? userId = null);
         Task<Result<EventDto>> GetEventByIdAsync(int id);
         Task<Result<List<EventDto>>> GetEventsByCollegeAsync(string college);
         Task<Result<EventDto>> CreateEventAsync(EventDto eventDto);
         Task<Result<EventDto>> UpdateEventAsync(int id, EventDto eventDto);
         Task<Result> DeleteEventAsync(int id);
-        Task<Result> ToggleBookmarkEventAsync(int eventId, int userId);
+        Task<Result<bool>> ToggleBookmarkEventAsync(int eventId, int userId);
         Task<Result> RegisterForEventAsync(int eventId, int userId);
+        Task<Result<List<EventDto>>> GetBookmarkedEventsAsync(int userId);
     }
 }

@@ -13,14 +13,18 @@ namespace CampusHub.Domain.Entities
         public College? College { get; set; }
         public int? ProgramId { get; set; }
         public ProgramEntity? Program { get; set; }
-        public CampusLocation CampusLocation { get; set; } = CampusLocation.MainCampus; 
-        public DateTime Date { get; set; }
+        public CampusLocation CampusLocation { get; set; } = CampusLocation.MainCampus;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public DateTime? RegistrationDeadline { get; set; }
+
+        public EventStatus Status { get; set; } = EventStatus.Upcoming;
         public string Location { get; set; } = string.Empty;
         public string ImagePath { get; set; } = string.Empty;
         public string Priority { get; set; } = "Medium";
         public string Type { get; set; } = string.Empty;
         public int InterestedCount { get; set; }
+        public ICollection<EventBookmark> EventBookmarks { get; set; } = new List<EventBookmark>();
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

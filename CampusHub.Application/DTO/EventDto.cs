@@ -1,4 +1,6 @@
-﻿namespace CampusHub.Application.DTOs
+﻿using CampusHub.Domain.Entities;
+
+namespace CampusHub.Application.DTOs
 {
     public class EventDto
     {
@@ -10,10 +12,12 @@
         public string CollegeName { get; set; } = string.Empty;
         public int? ProgramId { get; set; }
         public string? ProgramName { get; set; }
-        public int CampusLocationId { get; set; }         
-        public string CampusLocationName { get; set; } = string.Empty; 
-        public DateTime Date { get; set; }
+        public int CampusLocationId { get; set; }
+        public string CampusLocationName { get; set; } = string.Empty;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public DateTime? RegistrationDeadline { get; set; }
+        public EventStatus Status { get; set; }
         public string Location { get; set; } = string.Empty;
 
         public string ImagePath { get; set; } = string.Empty;

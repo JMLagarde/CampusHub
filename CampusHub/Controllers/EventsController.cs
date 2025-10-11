@@ -18,9 +18,9 @@ namespace CampusHub.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllEvents()
+        public async Task<IActionResult> GetAllEvents(int? userId)
         {
-            var result = await _eventService.GetAllEventsAsync();
+            var result = await _eventService.GetAllEventsAsync(userId);
 
             if (result.IsFailed)
             {
@@ -127,6 +127,20 @@ namespace CampusHub.API.Controllers
             }
 
             return Ok();
+        }
+
+        [HttpGet("bookmarked/{userId}")]
+        public async Task<IActionResult> GetBookmarkedEvents(int userId)
+        {
+            var result = await _eventService.GetBookmarkedEventsAsync(userId);
+
+            if (result.IsFailed)
+            {
+                _logger.LogError("Error retrieving bookmarked events for user {UserId}: {Errors}", userId, string.Join(", ", result.Errors));
+                return BadRequest(result.Errors);
+            }
+
+            return Ok(result.Value);
         }
     }
 
