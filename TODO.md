@@ -1,0 +1,17 @@
+- [x] Add EventBookmark to DbContext configuration
+- [x] Add EventBookmarks collection to Event entity
+- [x] Change Event.Status to stored property
+- [x] Add Status to DbContext configuration for Event
+- [x] Add migration for EventBookmark and Event.Status
+- [x] Update EventFormDto to include Status
+- [x] Update AdminEvents.razor to include Status in form
+- [x] Update AdminEventService MapToEntity and UpdateEventEntity to set Status
+- [x] Update EventService MapToEntity and UpdateEventEntity to set Status
+- [x] Update EventService GetAllEventsAsync to take userId, get bookmarked ids, set IsBookmarked
+- [x] Update MapToDto to take isBookmarked, set InterestedCount = evt.EventBookmarks?.Count ?? 0
+- [x] Implement GetBookmarkedEventIdsAsync and ToggleBookmarkAsync in EventRepository
+- [x] Implement ToggleBookmarkEventAsync in EventService
+- [x] Update EventsController GetAllEvents to take userId
+- [x] Update Events.razor LoadEvents to pass userId
+- [x] Update IEventService interface
+- [x] Update IEventRepository interface

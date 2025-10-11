@@ -2,12 +2,14 @@
 @layout Layout.MainLayout
 @rendermode InteractiveServer
 @using CampusHub.Application.DTO
+@using CampusHub.Application.DTOs
 @using CampusHub.Application.Interfaces
 @using CampusHub.Domain.Entities
 @using CurrieTechnologies.Razor.SweetAlert2
 @inject IJSRuntime JSRuntime
 @inject IUserService UserService
 @inject IMarketplaceService MarketplaceService
+@inject IEventService EventService
 @using Microsoft.JSInterop;
 @inject SweetAlertService Swal
 
@@ -35,6 +37,10 @@
             <button class="profile-tab @(activeTab == "liked" ? "active" : "")"
                     @onclick="@(() => ShowProfileTab("liked"))">
                 Liked Items (@likedItems.Count)
+            </button>
+            <button class="profile-tab @(activeTab == "events" ? "active" : "")"
+                    @onclick="@(() => ShowProfileTab("events"))">
+                Bookmarked Events (@bookmarkedEvents.Count)
             </button>
         </div>
 
@@ -533,6 +539,144 @@
                 }
             </div>
 
+            <!-- Bookmarked Events section -->
+            <div id="profile-events" style="display: @(activeTab == "events" ? "block" : "none")">
+                <div class="listings-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <svg class="stat-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                                <path d="M8 14l2 2 4-4" />
+                            </svg>
+                            <div class="stat-info">
+                                <div class="stat-number">@bookmarkedEvents.Count</div>
+                                <div class="stat-label">Bookmarked Events</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Show events messages -->
+                @if (!string.IsNullOrEmpty(eventsErrorMessage))
+                {
+                    <div class="alert alert-error">
+                        @eventsErrorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(eventsSuccessMessage))
+                {
+                    <div class="alert alert-success">
+                        @eventsSuccessMessage
+                    </div>
+                }
+
+                @if (bookmarkedEvents.Any())
+                {
+                    <div class="listings-section">
+                        <h3>Bookmarked Events (@bookmarkedEvents.Count)</h3>
+                        <div>
+                            @foreach (var eventItem in bookmarkedEvents)
+                            {
+                                <article class="border border-gray-200 rounded-lg p-4 mb-6 relative flex flex-col md:flex-row md:space-x-4" style="border-left: 3px solid #84cc16">
+                                    <img alt="@eventItem.Title"
+                                         class="w-24 h-24 rounded-md object-cover mb-3 md:mb-0"
+                                         src="@GetEventImagePath(eventItem.ImagePath)" />
+
+                                    <div class="flex-1 flex flex-col">
+                                        <div class="flex flex-wrap gap-1 mb-1">
+                                            <span class="@GetEventPriorityClass(eventItem.Priority)">
+                                                <i class="fas fa-check-circle text-[8px]"></i>
+                                                @eventItem.Priority
+                                            </span>
+                                            <span class="text-[10px] font-normal border border-gray-300 rounded-full px-2 py-0.5">
+                                                @eventItem.Type
+                                            </span>
+                                            <span class="@GetEventStatusBadge(eventItem.Status)">
+                                                @eventItem.Status
+                                            </span>
+                                        </div>
+
+                                        <h2 class="text-sm font-semibold text-gray-900 mb-1">@eventItem.Title</h2>
+
+                                        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+                                            <span class="@GetEventCollegeBadgeClass(eventItem.CollegeId)">
+                                                <i class="fas fa-graduation-cap text-[10px]"></i>
+                                                @eventItem.CollegeName
+                                            </span>
+
+                                            @if (!string.IsNullOrEmpty(eventItem.ProgramName))
+                                            {
+                                                <span class="text-[10px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5">
+                                                    @eventItem.ProgramName
+                                                </span>
+                                            }
+
+                                            <span class="@GetEventCampusBadgeClass(eventItem.CampusLocationId)">
+                                                <i class="fas fa-university text-[10px]"></i>
+                                                @eventItem.CampusLocationName
+                                            </span>
+
+                                            <span class="flex items-center gap-1">
+                                                <i class="far fa-calendar-alt text-xs"></i>
+                                                @eventItem.StartDate.ToString("MMMM dd, yyyy")
+                                            </span>
+                                        </div>
+
+                                        <p class="text-xs text-gray-600 mb-3 leading-relaxed">@eventItem.Description</p>
+
+                                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1 truncate max-w-[220px]">
+                                                <i class="fas fa-map-marker-alt text-[10px]"></i>
+                                                @eventItem.Location
+                                            </span>
+                                            <span class="flex items-center gap-1">
+                                                <i class="fas fa-user-friends text-[10px]"></i>
+                                                @eventItem.InterestedCount interested
+                                            </span>
+                                            @if (eventItem.RegistrationDeadline.HasValue)
+                                            {
+                                                <span class="text-red-600 flex items-center gap-1">
+                                                    <i class="fas fa-clock text-[10px]"></i>
+                                                    Registration Date: @eventItem.RegistrationDeadline.Value.ToString("MMMM dd, yyyy")
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col justify-between ml-auto mt-2 md:mt-0 space-y-2">
+                                        <button @onclick="() => RemoveBookmark(eventItem.Id)"
+                                                aria-label="Remove bookmark"
+                                                class="border border-gray-300 rounded-md p-1 text-lime-500 hover:text-red-500">
+                                            <i class="fas fa-bookmark"></i>
+                                        </button>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                                <path d="M8 14l2 2 4-4" />
+                            </svg>
+                        </div>
+                        <h3>No Bookmarked Events Yet</h3>
+                        <p>Events you bookmark from the events page will appear here. Start exploring events to build your bookmarks!</p>
+                    </div>
+                }
+            </div>
+
             @if (showEditPopup)
             {
                 <div class="modal-overlay" @onclick="CloseEditPopup">
@@ -681,6 +825,10 @@
     private string? likedErrorMessage;
     private string? likedSuccessMessage;
 
+    private List<EventDto> bookmarkedEvents = new();
+    private string? eventsErrorMessage;
+    private string? eventsSuccessMessage;
+
     [JSInvokable]
     public static Task CloseAllMenus()
     {
@@ -696,6 +844,7 @@
                 await LoadUserProfile();
                 await LoadUserListings();
                 await LoadUserLikedItems();
+                await LoadBookmarkedEvents();
                 StateHasChanged();
             }
             catch (Exception ex)
@@ -778,13 +927,11 @@
         {
             if (currentUser != null)
             {
-                // Get the Result wrapper
                 var result = await MarketplaceService.GetUserListingsAsync(currentUser.Id);
 
-                // Check if the operation was successful
                 if (result.IsSuccess)
                 {
-                    userListings = result.Value; // Extract the actual list from Result
+                    userListings = result.Value; 
 
                     if (userListings.Any())
                     {
@@ -811,12 +958,10 @@
                 }
                 else
                 {
-                    // Handle failure case
                     var error = result.Errors.FirstOrDefault();
                     listingErrorMessage = error?.Message ?? "Failed to load listings";
                     Console.WriteLine($"Error loading listings: {listingErrorMessage}");
 
-                    // Initialize empty lists
                     userListings = new List<MarketplaceItemDto>();
                     activeListings = new List<MarketplaceItemDto>();
                     soldListings = new List<MarketplaceItemDto>();
@@ -829,7 +974,6 @@
             Console.WriteLine($"Error loading listings: {ex.Message}");
             listingErrorMessage = $"Error loading listings: {ex.Message}";
 
-            // Initialize empty lists on exception
             userListings = new List<MarketplaceItemDto>();
             activeListings = new List<MarketplaceItemDto>();
             soldListings = new List<MarketplaceItemDto>();
@@ -860,6 +1004,31 @@
         {
             Console.WriteLine($"Error loading liked items: {ex.Message}");
             likedErrorMessage = $"Error loading liked items: {ex.Message}";
+        }
+    }
+
+    private async Task LoadBookmarkedEvents()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                var result = await EventService.GetBookmarkedEventsAsync(currentUser.Id);
+
+                if (result.IsSuccess)
+                {
+                    bookmarkedEvents = result.Value;
+                }
+                else
+                {
+                    eventsErrorMessage = result.Errors.FirstOrDefault()?.Message ?? "Error loading bookmarked events";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading bookmarked events: {ex.Message}");
+            eventsErrorMessage = $"Error loading bookmarked events: {ex.Message}";
         }
     }
 
@@ -899,6 +1068,39 @@
         }
     }
 
+    private async Task RemoveBookmark(int eventId)
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                var result = await EventService.ToggleBookmarkEventAsync(eventId, currentUser.Id);
+
+                if (result.IsSuccess)
+                {
+                    bookmarkedEvents = bookmarkedEvents.Where(e => e.Id != eventId).ToList();
+                    eventsSuccessMessage = "Event removed from bookmarks!";
+                    _ = Task.Delay(3000).ContinueWith(_ =>
+                    {
+                        eventsSuccessMessage = null;
+                        InvokeAsync(StateHasChanged);
+                    });
+                }
+                else
+                {
+                    eventsErrorMessage = result.Errors.FirstOrDefault()?.Message ?? "Failed to remove bookmark";
+                }
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing bookmark: {ex.Message}");
+            eventsErrorMessage = $"Error removing bookmark: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
     private void ShowProfileTab(string tabName)
     {
         activeTab = tabName;
@@ -908,6 +1110,14 @@
             _ = Task.Run(async () =>
             {
                 await LoadUserLikedItems();
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        else if (tabName == "events")
+        {
+            _ = Task.Run(async () =>
+            {
+                await LoadBookmarkedEvents();
                 await InvokeAsync(StateHasChanged);
             });
         }
@@ -1018,6 +1228,63 @@
             isSaving = false;
             StateHasChanged();
         }
+    }
+
+    private string GetEventImagePath(string imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath))
+            return "/images/events/default-event.jpg";
+
+        return $"/uploads/events/{imagePath}";
+    }
+
+    private string GetEventPriorityClass(string priority)
+    {
+        return priority.ToLower() switch
+        {
+            "high" => "text-[10px] font-semibold bg-lime-500 text-white rounded-full px-2 py-0.5 flex items-center gap-1",
+            "medium" => "text-[10px] font-semibold bg-gray-500 text-white rounded-full px-2 py-0.5 flex items-center gap-1",
+            "low" => "text-[10px] font-semibold bg-gray-300 text-gray-700 rounded-full px-2 py-0.5 flex items-center gap-1",
+            _ => "text-[10px] font-semibold bg-gray-400 text-white rounded-full px-2 py-0.5 flex items-center gap-1"
+        };
+    }
+
+    private string GetEventCollegeBadgeClass(int collegeId)
+    {
+        return collegeId switch
+        {
+            1 => "flex items-center gap-1 bg-yellow-100 text-yellow-600 rounded-md px-2 py-0.5 text-[10px]",
+            2 => "flex items-center gap-1 bg-red-100 text-red-600 rounded-md px-2 py-0.5 text-[10px]",
+            3 => "flex items-center gap-1 bg-green-100 text-green-600 rounded-md px-2 py-0.5 text-[10px]",
+            4 => "flex items-center gap-1 bg-orange-100 text-orange-600 rounded-md px-2 py-0.5 text-[10px]",
+            5 => "flex items-center gap-1 bg-purple-100 text-purple-600 rounded-md px-2 py-0.5 text-[10px]",
+            6 => "flex items-center gap-1 bg-blue-100 text-blue-600 rounded-md px-2 py-0.5 text-[10px]",
+            7 => "flex items-center gap-1 bg-indigo-100 text-indigo-600 rounded-md px-2 py-0.5 text-[10px]",
+            _ => "flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 text-[10px]"
+        };
+    }
+
+    private string GetEventCampusBadgeClass(int campusLocationId)
+    {
+        return campusLocationId switch
+        {
+            1 => "flex items-center gap-1 bg-teal-100 text-teal-700 rounded-md px-2 py-0.5 text-[10px]",
+            2 => "flex items-center gap-1 bg-pink-100 text-pink-700 rounded-md px-2 py-0.5 text-[10px]",
+            3 => "flex items-center gap-1 bg-cyan-100 text-cyan-700 rounded-md px-2 py-0.5 text-[10px]",
+            4 => "flex items-center gap-1 bg-emerald-100 text-emerald-700 rounded-md px-2 py-0.5 text-[10px]",
+            _ => "flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 text-[10px]"
+        };
+    }
+
+    private string GetEventStatusBadge(CampusHub.Domain.Entities.EventStatus status)
+    {
+        return status switch
+        {
+            CampusHub.Domain.Entities.EventStatus.Upcoming => "text-[10px] font-semibold bg-blue-100 text-blue-600 rounded-full px-2 py-0.5",
+            CampusHub.Domain.Entities.EventStatus.Ongoing => "text-[10px] font-semibold bg-green-100 text-green-600 rounded-full px-2 py-0.5",
+            CampusHub.Domain.Entities.EventStatus.Ended => "text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-full px-2 py-0.5",
+            _ => "text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-full px-2 py-0.5"
+        };
     }
 
     private async Task ShowEditPopup(MarketplaceItemDto listing)

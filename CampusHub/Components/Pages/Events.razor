@@ -1,6 +1,7 @@
 ﻿@page "/events"
 @layout Layout.MainLayout
 @using CampusHub.Application.DTOs
+@using CampusHub.Domain.Entities
 @using CurrieTechnologies.Razor.SweetAlert2
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
@@ -74,6 +75,28 @@
         </button>
     </nav>
 
+    <nav class="flex flex-wrap gap-2 mb-4">
+        <button @onclick="@(() => FilterByStatus(null))"
+                class="flex items-center space-x-1 @(selectedStatus == null ? "bg-blue-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>All Status</span>
+        </button>
+
+        <button @onclick="@(() => FilterByStatus(EventStatus.Upcoming))"
+                class="flex items-center space-x-1 @(selectedStatus == EventStatus.Upcoming ? "bg-blue-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Upcoming</span>
+        </button>
+
+        <button @onclick="@(() => FilterByStatus(EventStatus.Ongoing))"
+                class="flex items-center space-x-1 @(selectedStatus == EventStatus.Ongoing ? "bg-blue-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Ongoing</span>
+        </button>
+
+        <button @onclick="@(() => FilterByStatus(EventStatus.Ended))"
+                class="flex items-center space-x-1 @(selectedStatus == EventStatus.Ended ? "bg-blue-500 text-white" : "border border-gray-300 text-gray-700") text-xs font-semibold rounded-full px-3 py-1">
+            <span>Ended</span>
+        </button>
+    </nav>
+
     <section>
         <h1 class="text-lg font-extrabold text-gray-900 mb-1">University Events</h1>
         <p class="text-xs text-gray-500 mb-2 flex items-center gap-2">
@@ -139,7 +162,7 @@
 
                             <span class="flex items-center gap-1">
                                 <i class="far fa-calendar-alt text-xs"></i>
-                                @evt.Date.ToString("MMMM dd, yyyy")
+                                @evt.StartDate.ToString("MMMM dd, yyyy")
                             </span>
                         </div>
 
@@ -229,7 +252,7 @@
                     }
                     <div>
                         <h3 class="font-bold text-sm mb-1">Date</h3>
-                        <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent.Date.ToString("MMMM dd, yyyy")</p>
+                        <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent.StartDate.ToString("MMMM dd, yyyy")</p>
                     </div>
                 </div>
 
@@ -277,14 +300,31 @@
 @code {
     private List<EventDto> events = new();
     private int? selectedCollegeId = null;
+    private EventStatus? selectedStatus = null;
     private bool isLoading = true;
     private EventDto? selectedEvent = null;
     private bool showModal = false;
     private int currentUserId = 0;
 
-    private IEnumerable<EventDto> filteredEvents => selectedCollegeId == null
-        ? events
-        : events.Where(e => e.CollegeId == selectedCollegeId.Value);
+    private IEnumerable<EventDto> filteredEvents
+    {
+        get
+        {
+            var filtered = events.AsEnumerable();
+            if (selectedCollegeId.HasValue)
+            {
+                filtered = filtered.Where(e => e.CollegeId == selectedCollegeId.Value);
+            }
+            if (selectedStatus.HasValue)
+            {
+                filtered = filtered.Where(e => e.Status == selectedStatus.Value);
+            }
+            return filtered
+                .OrderBy(e => e.Status == EventStatus.Ongoing ? 0 : e.Status == EventStatus.Upcoming ? 1 : 2)
+                .ThenBy(e => e.Status == EventStatus.Upcoming ? e.StartDate : DateTime.MaxValue)
+                .ThenByDescending(e => e.Status == EventStatus.Ended ? e.EndDate : DateTime.MinValue);
+        }
+    }
 
     private int totalEvents => events.Count;
 
@@ -320,7 +360,7 @@
         isLoading = true;
         try
         {
-            events = await Http.GetFromJsonAsync<List<EventDto>>("api/events") ?? new();
+            events = await Http.GetFromJsonAsync<List<EventDto>>($"api/events?userId={currentUserId}") ?? new();
         }
         catch (Exception ex)
         {
@@ -336,6 +376,11 @@
     private void FilterByCollege(int? collegeId)
     {
         selectedCollegeId = collegeId;
+    }
+
+    private void FilterByStatus(EventStatus? status)
+    {
+        selectedStatus = status;
     }
 
     private int GetCollegeCount(int collegeId)

@@ -15,6 +15,7 @@ namespace CampusHub.Application.Interfaces
         DbSet<MarketplaceLike> MarketplaceLikes { get; set; }
         DbSet<Report> Reports { get; set; }
         DbSet<Event> Events { get; set; }
+        DbSet<EventBookmark> EventBookmarks { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         int SaveChanges();

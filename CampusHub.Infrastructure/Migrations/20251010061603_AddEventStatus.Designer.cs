@@ -4,6 +4,7 @@ using CampusHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CampusHub.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010061603_AddEventStatus")]
+    partial class AddEventStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -138,9 +141,6 @@ namespace CampusHub.Infrastructure.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -173,35 +173,59 @@ namespace CampusHub.Infrastructure.Migrations
                     b.HasIndex("StartDate");
 
                     b.ToTable("Events");
-                });
 
-            modelBuilder.Entity("CampusHub.Domain.Entities.EventBookmark", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("EventId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("EventBookmarks");
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CampusLocation = 2,
+                            CollegeId = 1,
+                            CreatedAt = new DateTime(2025, 10, 1, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Prepare for your upcoming midterm exams with focus and dedication. Aim for an A+! Don't forget to review and study well. Good luck to all students!",
+                            EndDate = new DateTime(2025, 10, 4, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            ImagePath = "midterm-exam.jpg",
+                            InterestedCount = 400,
+                            Location = "Various Classrooms",
+                            Priority = "High",
+                            ProgramId = 4,
+                            StartDate = new DateTime(2025, 10, 4, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Title = "Midterm Exam",
+                            Type = "Academic"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CampusLocation = 1,
+                            CollegeId = 1,
+                            CreatedAt = new DateTime(2025, 10, 2, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "An exciting event hosted by JPIA-UCC South. Oct 7-8, 2025. Accountancy challenges and workshops.",
+                            EndDate = new DateTime(2025, 10, 8, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            ImagePath = "mindscape-metrics2.jpg",
+                            InterestedCount = 300,
+                            Location = "UCC South Campus",
+                            Priority = "Medium",
+                            ProgramId = 1,
+                            StartDate = new DateTime(2025, 10, 7, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Title = "Mindscape Metrics 2: The Ledgerlore Odyssey: Rise of the Crown",
+                            Type = "Academic"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CampusLocation = 1,
+                            CollegeId = 6,
+                            CreatedAt = new DateTime(2025, 10, 3, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "UCC Computer Studies presents CSD Fair 2025: Bringing Youth to Technology Excellence. Oct 8-9, 2025.",
+                            EndDate = new DateTime(2025, 10, 9, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            ImagePath = "csd-fair-2025.jpg",
+                            InterestedCount = 250,
+                            Location = "Computer Studies Building",
+                            Priority = "Medium",
+                            ProgramId = 30,
+                            StartDate = new DateTime(2025, 10, 8, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Title = "CSD Fair 2025",
+                            Type = "Academic"
+                        });
                 });
 
             modelBuilder.Entity("CampusHub.Domain.Entities.MarketplaceItem", b =>
@@ -789,25 +813,6 @@ namespace CampusHub.Infrastructure.Migrations
                     b.Navigation("Program");
                 });
 
-            modelBuilder.Entity("CampusHub.Domain.Entities.EventBookmark", b =>
-                {
-                    b.HasOne("CampusHub.Domain.Entities.Event", "Event")
-                        .WithMany("EventBookmarks")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CampusHub.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CampusHub.Domain.Entities.MarketplaceItem", b =>
                 {
                     b.HasOne("CampusHub.Domain.Entities.User", null)
@@ -889,11 +894,6 @@ namespace CampusHub.Infrastructure.Migrations
                     b.Navigation("Events");
 
                     b.Navigation("Programs");
-                });
-
-            modelBuilder.Entity("CampusHub.Domain.Entities.Event", b =>
-                {
-                    b.Navigation("EventBookmarks");
                 });
 
             modelBuilder.Entity("CampusHub.Domain.Entities.MarketplaceItem", b =>

@@ -17,7 +17,7 @@ namespace CampusHub.Application.Repositories
         {
             return await _context.MarketplaceItems
                 .AsNoTracking()
-                .Where(x => x.IsActive)
+                .Where(x => x.IsActive && x.Status != MarketplaceItemStatus.Sold)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
@@ -105,7 +105,7 @@ namespace CampusHub.Application.Repositories
         public async Task<IEnumerable<MarketplaceItem>> GetByLocationAsync(CampusLocation location)
         {
             return await _context.MarketplaceItems
-                .Where(x => x.IsActive && x.Location == location)
+                .Where(x => x.IsActive && x.Status != MarketplaceItemStatus.Sold && x.Location == location)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
