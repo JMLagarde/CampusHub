@@ -28,7 +28,6 @@ namespace CampusHub.Domain.Entities
         public int LikesCount { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
-        public bool IsActive { get; set; } = true;
         public MeetupPreference MeetupPreference { get; set; }
 
         public MarketplaceItemStatus Status { get; set; } = MarketplaceItemStatus.Active;

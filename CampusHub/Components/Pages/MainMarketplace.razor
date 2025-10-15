@@ -71,7 +71,7 @@
                             <span class="badge badge-category">@item.Category</span>
                         </div>
                         <button class="like-button @(item.IsLiked ? "liked" : "")"
-                                @onclick="async (e) => await ToggleLike(item.Id)"
+                                @onclick="() => ToggleLike(item.Id)"
                                 @onclick:stopPropagation="true">
                             <svg class="icon" viewBox="0 0 24 24" fill="@(item.IsLiked ? "currentColor" : "none")" stroke="currentColor">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />

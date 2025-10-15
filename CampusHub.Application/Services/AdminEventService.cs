@@ -329,7 +329,7 @@ namespace CampusHub.Application.Services
             existingEvent.ImagePath = dto.ImagePath;
             existingEvent.Priority = dto.Priority;
             existingEvent.Type = dto.Type;
-            existingEvent.Status = dto.Status;
+            existingEvent.Status = CalculateEventStatus(dto.StartDate, dto.EndDate);
         }
 
         private static string GetCampusLocationName(CampusLocation loc)
@@ -360,7 +360,7 @@ namespace CampusHub.Application.Services
                 StartDate = evt.StartDate,
                 EndDate = evt.EndDate,
                 RegistrationDeadline = evt.RegistrationDeadline,
-                Status = evt.Status,
+                Status = CalculateEventStatus(evt.StartDate, evt.EndDate),
                 Location = evt.Location,
                 ImagePath = evt.ImagePath,
                 Priority = evt.Priority,
@@ -387,9 +387,20 @@ namespace CampusHub.Application.Services
                 ImagePath = dto.ImagePath,
                 Priority = dto.Priority,
                 Type = dto.Type,
-                Status = dto.Status,
+                Status = CalculateEventStatus(dto.StartDate, dto.EndDate),
                 InterestedCount = 0
             };
+        }
+
+        private static EventStatus CalculateEventStatus(DateTime startDate, DateTime endDate)
+        {
+            var now = DateTime.Now;
+            if (now < startDate)
+                return EventStatus.Upcoming;
+            else if (now >= startDate && now <= endDate)
+                return EventStatus.Ongoing;
+            else
+                return EventStatus.Ended;
         }
     }
 }

@@ -14,7 +14,7 @@ namespace CampusHub.Application.Repositories
             _context = context;
         }
 
-        public async Task<Result<List<Event>>> GetAllAsync()
+        public async Task<Result<List<Event>>> GetAllAsync() 
         {
             var events = await _context.Events
                 .Include(e => e.College)

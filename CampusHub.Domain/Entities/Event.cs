@@ -8,7 +8,6 @@ namespace CampusHub.Domain.Entities
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-
         public int CollegeId { get; set; }
         public College? College { get; set; }
         public int? ProgramId { get; set; }

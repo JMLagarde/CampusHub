@@ -17,7 +17,7 @@ namespace CampusHub.Application.Repositories
         {
             return await _context.MarketplaceItems
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.Status != MarketplaceItemStatus.Sold)
+                .Where(x => x.Status != MarketplaceItemStatus.Sold)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
@@ -27,7 +27,7 @@ namespace CampusHub.Application.Repositories
         {
             return await _context.MarketplaceItems
                 .Include(x => x.Likes)
-                .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<MarketplaceItem> CreateAsync(MarketplaceItem item)
@@ -105,7 +105,7 @@ namespace CampusHub.Application.Repositories
         public async Task<IEnumerable<MarketplaceItem>> GetByLocationAsync(CampusLocation location)
         {
             return await _context.MarketplaceItems
-                .Where(x => x.IsActive && x.Status != MarketplaceItemStatus.Sold && x.Location == location)
+                .Where(x => x.Status != MarketplaceItemStatus.Sold && x.Location == location)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
@@ -114,7 +114,7 @@ namespace CampusHub.Application.Repositories
         public async Task<IEnumerable<MarketplaceItem>> GetBySellerAsync(int sellerId)
         {
             return await _context.MarketplaceItems
-                .Where(x => x.IsActive && x.SellerId == sellerId)
+                .Where(x => x.SellerId == sellerId)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
@@ -126,7 +126,6 @@ namespace CampusHub.Application.Repositories
                 .Where(like => like.UserId == userId)
                 .Include(like => like.MarketplaceItem)
                 .ThenInclude(item => item.Likes)
-                .Where(like => like.MarketplaceItem.IsActive)
                 .Select(like => like.MarketplaceItem)
                 .OrderByDescending(item => item.CreatedDate)
                 .ToListAsync();
@@ -136,7 +135,7 @@ namespace CampusHub.Application.Repositories
         {
             return await _context.MarketplaceLikes
                 .Where(like => like.UserId == userId)
-                .CountAsync(like => like.MarketplaceItem.IsActive);
+                .CountAsync();
         }
 
         public async Task<bool> RemoveFromWishlistAsync(int itemId, int userId)

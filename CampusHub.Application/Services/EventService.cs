@@ -244,7 +244,7 @@ namespace CampusHub.Application.Services
 
                 StartDate = evt.StartDate,
                 EndDate = evt.EndDate,
-                Status = evt.Status,
+                Status = CalculateEventStatus(evt.StartDate, evt.EndDate),
                 RegistrationDeadline = evt.RegistrationDeadline,
 
                 Location = evt.Location,
@@ -281,7 +281,7 @@ namespace CampusHub.Application.Services
                 Priority = dto.Priority,
                 Type = dto.Type,
                 InterestedCount = dto.InterestedCount,
-                Status = dto.Status,
+                Status = CalculateEventStatus(dto.StartDate, dto.EndDate),
                 CreatedAt = DateTime.UtcNow
             };
         }
@@ -299,6 +299,17 @@ namespace CampusHub.Application.Services
             var fileName = Path.GetFileName(imagePath.Trim());
 
             return fileName ?? string.Empty;  // Fallback if Path.GetFileName returns null
+        }
+
+        private static EventStatus CalculateEventStatus(DateTime startDate, DateTime endDate)
+        {
+            var now = DateTime.Now;
+            if (now < startDate)
+                return EventStatus.Upcoming;
+            else if (now >= startDate && now <= endDate)
+                return EventStatus.Ongoing;
+            else
+                return EventStatus.Ended;
         }
     }
 }

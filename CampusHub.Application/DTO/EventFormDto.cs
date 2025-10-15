@@ -18,6 +18,5 @@ namespace CampusHub.Application.DTO
         public string Priority { get; set; } = "Medium";
         public string Type { get; set; } = string.Empty;
         public int InterestedCount { get; set; }
-        public EventStatus Status { get; set; } = EventStatus.Upcoming;
     }
 }
