@@ -162,7 +162,7 @@
 
                             <span class="flex items-center gap-1">
                                 <i class="far fa-calendar-alt text-xs"></i>
-                                @evt.StartDate.ToString("MMMM dd, yyyy")
+                                @evt.StartDate.ToString("MMMM dd, yyyy") - @evt.EndDate.ToString("MMMM dd, yyyy")
                             </span>
                         </div>
 
@@ -252,7 +252,7 @@
                     }
                     <div>
                         <h3 class="font-bold text-sm mb-1">Date</h3>
-                        <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent.StartDate.ToString("MMMM dd, yyyy")</p>
+                        <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent.StartDate.ToString("MMMM dd, yyyy") - @selectedEvent.EndDate.ToString("MMMM dd, yyyy")</p>
                     </div>
                 </div>
 

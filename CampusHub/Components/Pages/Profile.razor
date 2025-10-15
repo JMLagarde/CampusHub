@@ -6,6 +6,7 @@
 @using CampusHub.Application.Interfaces
 @using CampusHub.Domain.Entities
 @using CurrieTechnologies.Razor.SweetAlert2
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject IUserService UserService
 @inject IMarketplaceService MarketplaceService
@@ -622,7 +623,7 @@
 
                                             <span class="flex items-center gap-1">
                                                 <i class="far fa-calendar-alt text-xs"></i>
-                                                @eventItem.StartDate.ToString("MMMM dd, yyyy")
+                                                @eventItem.StartDate.ToString("MMMM dd, yyyy") - @eventItem.EndDate.ToString("MMMM dd, yyyy")
                                             </span>
                                         </div>
 
@@ -648,10 +649,15 @@
                                     </div>
 
                                     <div class="flex flex-col justify-between ml-auto mt-2 md:mt-0 space-y-2">
-                                        <button @onclick="() => RemoveBookmark(eventItem.Id)"
-                                                aria-label="Remove bookmark"
-                                                class="border border-gray-300 rounded-md p-1 text-lime-500 hover:text-red-500">
-                                            <i class="fas fa-bookmark"></i>
+                                        <button @onclick="() => ToggleBookmark(eventItem.Id)"
+                                                aria-label="Bookmark event"
+                                                class="border border-gray-300 rounded-md p-1 text-gray-600 hover:text-lime-500">
+                                            <i class="@(eventItem.IsBookmarked ? "fas fa-bookmark text-lime-500" : "far fa-bookmark")"></i>
+                                        </button>
+                                        <button @onclick="@(() => ShowEventModal(eventItem))"
+                                                aria-label="Expand event"
+                                                class="text-gray-600 hover:text-gray-900">
+                                            <i class="fas fa-expand"></i>
                                         </button>
                                     </div>
                                 </article>
@@ -791,6 +797,101 @@
                     </div>
                 </div>
             }
+
+            @if (showModal)
+            {
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="CloseModal">
+                    <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+                        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                            <h2 class="text-xl font-bold">@selectedEvent?.Title</h2>
+                            <button @onclick="CloseModal" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="p-6">
+                            <div class="text-center mb-4">
+                                <img src="@GetEventImagePath(selectedEvent?.ImagePath)" alt="@selectedEvent?.Title" class="max-h-96 mx-auto rounded-lg shadow-lg" />
+                            </div>
+
+                            <div class="flex gap-2 mb-4">
+                                <span class="@GetEventPriorityClass(selectedEvent?.Priority)">
+                                    <i class="fas fa-check-circle text-[8px]"></i> @selectedEvent?.Priority Priority
+                                </span>
+                                <span class="text-[10px] font-normal border border-gray-300 rounded-full px-2 py-0.5">
+                                    @selectedEvent?.Type
+                                </span>
+                                <span class="@GetEventCollegeBadgeClass(selectedEvent?.CollegeId ?? 0)">
+                                    <i class="fas fa-graduation-cap text-[10px]"></i> @selectedEvent?.CollegeName
+                                </span>
+                                <span class="@GetEventCampusBadgeClass(selectedEvent?.CampusLocationId ?? 0)">
+                                    <i class="fas fa-university text-[10px]"></i> @selectedEvent?.CampusLocationName
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <h3 class="font-bold text-sm mb-1">Campus</h3>
+                                    <p class="text-sm">
+                                        <i class="fas fa-university"></i> @selectedEvent?.CampusLocationName
+                                    </p>
+                                </div>
+                                @if (!string.IsNullOrEmpty(selectedEvent?.ProgramName))
+                                {
+                                    <div>
+                                        <h3 class="font-bold text-sm mb-1">Program</h3>
+                                        <p class="text-sm">@selectedEvent?.ProgramName</p>
+                                    </div>
+                                }
+                                <div>
+                                    <h3 class="font-bold text-sm mb-1">Date</h3>
+                                    <p class="text-sm"><i class="far fa-calendar-alt"></i> @selectedEvent?.StartDate.ToString("MMMM dd, yyyy") - @selectedEvent?.EndDate.ToString("MMMM dd, yyyy")</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h3 class="font-bold text-sm mb-1">Location</h3>
+                                <p class="text-sm"><i class="fas fa-map-marker-alt"></i> @selectedEvent?.Location</p>
+                            </div>
+
+                            <div class="mb-4">
+                                <h3 class="font-bold text-sm mb-1">Description</h3>
+                                <p class="text-sm">@selectedEvent?.Description</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h3 class="font-bold text-sm mb-1">Interest</h3>
+                                    <p class="text-sm"><i class="fas fa-user-friends"></i> @selectedEvent?.InterestedCount people interested</p>
+                                </div>
+                                @if (selectedEvent?.RegistrationDeadline.HasValue == true)
+                                {
+                                    <div>
+                                        <h3 class="font-bold text-sm mb-1">Registration Deadline</h3>
+                                        <p class="text-sm text-red-600">
+                                            <i class="fas fa-clock"></i> @selectedEvent?.RegistrationDeadline.Value.ToString("MMMM dd, yyyy")
+                                        </p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-2">
+                            <button @onclick="CloseModal" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                                Close
+                            </button>
+                            @if (selectedEvent != null && currentUserId != 0)
+                            {
+                                <button @onclick="@(() => ToggleBookmark(selectedEvent.Id))"
+                                        class="px-4 py-2 @(selectedEvent.IsBookmarked ? "bg-gray-400" : "bg-lime-500") text-white rounded-md hover:@(selectedEvent.IsBookmarked ? "bg-gray-500" : "bg-lime-600")">
+                                    <i class="@(selectedEvent.IsBookmarked ? "fas fa-bookmark" : "far fa-bookmark")"></i>
+                                    @(selectedEvent.IsBookmarked ? "Bookmarked" : "Bookmark Event")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
         }
         else
         {
@@ -828,6 +929,9 @@
     private List<EventDto> bookmarkedEvents = new();
     private string? eventsErrorMessage;
     private string? eventsSuccessMessage;
+    private EventDto? selectedEvent = null;
+    private bool showModal = false;
+    private int currentUserId = 0;
 
     [JSInvokable]
     public static Task CloseAllMenus()
@@ -867,6 +971,7 @@
 
             if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
             {
+                currentUserId = userId;
                 Console.WriteLine($"Calling UserService.GetUserByIdAsync for userId: {userId}");
                 currentUser = await UserService.GetUserByIdAsync(userId);
                 Console.WriteLine($"UserService returned: {(currentUser != null ? currentUser.FullName : "NULL")}");
@@ -1068,7 +1173,7 @@
         }
     }
 
-    private async Task RemoveBookmark(int eventId)
+    private async Task ToggleBookmark(int eventId)
     {
         try
         {
@@ -1078,27 +1183,53 @@
 
                 if (result.IsSuccess)
                 {
-                    bookmarkedEvents = bookmarkedEvents.Where(e => e.Id != eventId).ToList();
-                    eventsSuccessMessage = "Event removed from bookmarks!";
-                    _ = Task.Delay(3000).ContinueWith(_ =>
+                    var eventItem = bookmarkedEvents.FirstOrDefault(e => e.Id == eventId);
+                    if (eventItem != null)
                     {
-                        eventsSuccessMessage = null;
-                        InvokeAsync(StateHasChanged);
-                    });
+                        eventItem.IsBookmarked = !eventItem.IsBookmarked;
+                        if (!eventItem.IsBookmarked)
+                        {
+                            bookmarkedEvents = bookmarkedEvents.Where(e => e.Id != eventId).ToList();
+                            eventsSuccessMessage = "Event removed from bookmarks!";
+                        }
+                        else
+                        {
+                            eventsSuccessMessage = "Event added to bookmarks!";
+                        }
+                        _ = Task.Delay(3000).ContinueWith(_ =>
+                        {
+                            eventsSuccessMessage = null;
+                            InvokeAsync(StateHasChanged);
+                        });
+                    }
                 }
                 else
                 {
-                    eventsErrorMessage = result.Errors.FirstOrDefault()?.Message ?? "Failed to remove bookmark";
+                    eventsErrorMessage = result.Errors.FirstOrDefault()?.Message ?? "Failed to toggle bookmark";
                 }
                 StateHasChanged();
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error removing bookmark: {ex.Message}");
-            eventsErrorMessage = $"Error removing bookmark: {ex.Message}";
+            Console.WriteLine($"Error toggling bookmark: {ex.Message}");
+            eventsErrorMessage = $"Error toggling bookmark: {ex.Message}";
             StateHasChanged();
         }
+    }
+
+    private void ShowEventModal(EventDto eventItem)
+    {
+        selectedEvent = eventItem;
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        selectedEvent = null;
+        StateHasChanged();
     }
 
     private void ShowProfileTab(string tabName)

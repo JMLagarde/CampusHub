@@ -221,7 +221,7 @@
                             <InputDate @bind-Value="eventForm.RegistrationDeadline" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
                         </div>
 
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-900 mb-1">Priority</label>
                                 <InputSelect @bind-Value="eventForm.Priority" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
@@ -235,15 +235,6 @@
                                 <label class="block text-sm font-semibold text-gray-900 mb-1">Event Type</label>
                                 <InputText @bind-Value="eventForm.Type" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="e.g., Academic, Career" />
                                 <ValidationMessage For="@(() => eventForm.Type)" class="text-red-600 text-xs mt-1" />
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-900 mb-1">Status</label>
-                                <InputSelect @bind-Value="eventForm.Status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                                    <option value="Upcoming">Upcoming</option>
-                                    <option value="Ongoing">Ongoing</option>
-                                    <option value="Ended">Ended</option>
-                                </InputSelect>
                             </div>
                         </div>
 
@@ -440,8 +431,7 @@
             ImagePath = evt.ImagePath,
             Priority = evt.Priority,
             Type = evt.Type,
-            InterestedCount = evt.InterestedCount,
-            Status = evt.Status
+            InterestedCount = evt.InterestedCount
         };
         selectedFileName = !string.IsNullOrEmpty(evt.ImagePath) ? Path.GetFileName(evt.ImagePath) : string.Empty;
         imagePreviewUrl = !string.IsNullOrEmpty(evt.ImagePath) ? evt.ImagePath : string.Empty;
@@ -539,8 +529,7 @@
                 ImagePath = eventForm.ImagePath,
                 Priority = eventForm.Priority,
                 Type = eventForm.Type,
-                InterestedCount = eventForm.InterestedCount,
-                Status = eventForm.Status
+                InterestedCount = eventForm.InterestedCount
             };
 
             HttpResponseMessage response;

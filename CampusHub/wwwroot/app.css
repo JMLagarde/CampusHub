@@ -1047,6 +1047,7 @@ textarea {
     align-items: center;
     justify-content: center;
     transition: background-color 0.2s ease-in-out;
+    z-index: 10;
 }
 
     .like-button:hover {
@@ -1823,6 +1824,32 @@ textarea:focus {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.product-details-dialog .like-button {
+    position: static !important;
+    width: auto;
+    height: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--background);
+    color: var(--foreground);
+    padding: var(--spacing-2) var(--spacing-4);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.product-details-dialog .like-button:hover {
+    background-color: var(--accent);
+}
+
+.product-details-dialog .like-button.liked {
+    color: #ef4444;
 }
 
 .modal-overlay {

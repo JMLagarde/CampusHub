@@ -3,7 +3,7 @@ using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+//automapper
 namespace CampusHub.API.Controllers
 {
     [ApiController]

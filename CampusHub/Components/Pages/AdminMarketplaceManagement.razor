@@ -1,0 +1,405 @@
+﻿@page "/admin/marketplace"
+@layout Layout.AdminLayout
+@rendermode InteractiveServer
+@using CampusHub.Application.DTO
+@using CampusHub.Application.Interfaces
+@using CampusHub.Domain.Entities
+@using CurrieTechnologies.Razor.SweetAlert2
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject IAdminMarketplaceService AdminMarketplaceService
+@inject SweetAlertService Swal
+
+<main class="p-6">
+    <section class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+        <div>
+            <h2 class="font-bold text-base leading-5 mb-1">
+                Marketplace Moderation
+            </h2>
+            <p class="text-xs text-gray-500 leading-4">
+                Review and moderate marketplace listings
+            </p>
+        </div>
+        <div class="mt-3 md:mt-0">
+            <label class="sr-only" for="search">
+                Search listings
+            </label>
+            <input 
+                class="w-full md:w-72 text-xs leading-4 text-gray-500 placeholder:text-gray-400 border border-gray-200 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-gray-300" 
+                id="search" 
+                placeholder="Search listings by title, seller, or category..." 
+                type="search" 
+                value="@searchQuery"
+                @oninput="@(e => UpdateSearch(e.Value?.ToString() ?? ""))" />
+        </div>
+    </section>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p class="mt-2 text-gray-600">Loading marketplace data...</p>
+        </div>
+    }
+    else
+    {
+        <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1">
+                    @stats.TotalListings
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Total Listings
+                </p>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1 text-[#0FA90F]">
+                    @stats.ActiveListings
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Active
+                </p>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1 text-[#4B5563]">
+                    @stats.SoldListings
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Sold
+                </p>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1 text-[#E11D48]">
+                    @stats.FlaggedListings
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Flagged
+                </p>
+            </div>
+        </section>
+
+        <section class="mb-4">
+            <nav class="inline-flex space-x-2 bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold leading-4 text-gray-700">
+                <button 
+                    class="@(selectedFilter == "All" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1 font-bold" 
+                    @onclick="@(() => SetFilter("All"))">
+                    All Listings (@marketplaceItems.Count)
+                </button>
+                <button 
+                    class="@(selectedFilter == "Active" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1" 
+                    @onclick="@(() => SetFilter("Active"))">
+                    Active (@stats.ActiveListings)
+                </button>
+                <button 
+                    class="@(selectedFilter == "Sold" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1" 
+                    @onclick="@(() => SetFilter("Sold"))">
+                    Sold (@stats.SoldListings)
+                </button>
+                <button 
+                    class="@(selectedFilter == "Flagged" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1" 
+                    @onclick="@(() => SetFilter("Flagged"))">
+                    Flagged (@stats.FlaggedListings)
+                </button>
+            </nav>
+        </section>
+
+        <section>
+            <div class="border border-gray-200 rounded-lg p-4 text-xs text-gray-700">
+                <p class="mb-4">
+                    @selectedFilter Listings (@FilteredItems.Count())
+                </p>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="pb-2 font-semibold pr-4">Product</th>
+                                <th class="pb-2 font-semibold pr-4">Seller</th>
+                                <th class="pb-2 font-semibold pr-4">Price</th>
+                                <th class="pb-2 font-semibold pr-4">Status</th>
+                                <th class="pb-2 font-semibold pr-4">Date</th>
+                                <th class="pb-2 font-semibold pr-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @if (!FilteredItems.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-gray-500">
+                                        No listings found matching your criteria.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var item in FilteredItems)
+                                {
+                                    <tr>
+                                        <td class="py-2 pr-4 min-w-[220px]">
+                                            <div class="flex items-center space-x-3">
+                                                <img 
+                                                    alt="@item.Title" 
+                                                    class="w-10 h-10 object-cover rounded" 
+                                                    src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://placehold.co/40x40/png?text=No+Image" : item.ImageUrl)" />
+                                                <div class="flex flex-col">
+                                                    <span class="font-semibold leading-4">@item.Title</span>
+                                                    <span class="text-[10px] text-gray-600 border border-gray-300 rounded px-1.5 py-[1px] w-max mt-0.5 select-none">
+                                                        @item.Category
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[140px]">
+                                            <p class="font-semibold leading-4">@item.SellerName</p>
+                                            <p class="text-[10px] text-gray-400 leading-3">@item.Location</p>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[60px]">
+                                            ₱@item.Price.ToString("N0")
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[100px]">
+                                            <div class="flex items-center space-x-2 @GetStatusColor(item.Status)">
+                                                <i class="@GetStatusIcon(item.Status) text-xs"></i>
+                                                <span class="@GetStatusBgColor(item.Status) text-white rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 select-none">
+                                                    @item.Status.ToString().ToLower()
+                                                </span>
+                                                @if (item.Status == MarketplaceItemStatus.Flagged && GetReportCount(item.Id) > 0)
+                                                {
+                                                    <span class="border border-gray-300 rounded-full px-2 py-0.5 text-[10px] font-normal leading-4 select-none text-gray-700">
+                                                        @GetReportCount(item.Id) reports
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[80px]">
+                                            @item.TimeAgo
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[40px]">
+                                            <div class="relative">
+                                                <button 
+                                                    class="text-gray-600 hover:text-gray-800 px-2 py-1" 
+                                                    @onclick="@(() => ToggleDropdown(item.Id))"
+                                                    @onclick:stopPropagation="true">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                @if (dropdownOpenItemId == item.Id)
+                                                {
+                                                    <div class="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-10">
+                                                        <button 
+                                                            class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100" 
+                                                            @onclick="@(async () => { await MarkAsSold(item.Id); dropdownOpenItemId = null; })"
+                                                            @onclick:stopPropagation="true">
+                                                            <i class="fas fa-check-circle mr-2"></i>Mark as Sold
+                                                        </button>
+                                                        <button 
+                                                            class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100" 
+                                                            @onclick="@(async () => { await MarkAsFlagged(item.Id); dropdownOpenItemId = null; })"
+                                                            @onclick:stopPropagation="true">
+                                                            <i class="fas fa-flag mr-2"></i>Mark as Flagged
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    }
+</main>
+
+@code {
+    private List<MarketplaceItemDto> marketplaceItems = new();
+    private List<ReportDto> reports = new();
+    private AdminMarketplaceStatsDto stats = new();
+    private string selectedFilter = "All";
+    private string searchQuery = "";
+    private bool isLoading = true;
+    private int? dropdownOpenItemId = null;
+    private bool hasRendered = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hasRendered = true;
+            await JSRuntime.InvokeVoidAsync("eval", @"
+            document.addEventListener('click', () => {
+                if (window.closeDropdown) {
+                    window.closeDropdown();
+                }
+            });
+        ");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var itemsResult = await AdminMarketplaceService.GetAllItemsAsync();
+            marketplaceItems = itemsResult.Value ?? new List<MarketplaceItemDto>();
+
+            var reportsResult = await AdminMarketplaceService.GetAllReportsAsync();
+            reports = reportsResult.Value ?? new List<ReportDto>();
+
+            var statsResult = await AdminMarketplaceService.GetMarketplaceStatsAsync();
+            stats = statsResult.Value ?? new AdminMarketplaceStatsDto();
+        }
+        catch (Exception ex)
+        {
+            if (hasRendered)
+            {
+                await Swal.FireAsync("Error", "Failed to load marketplace data", SweetAlertIcon.Error);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private IEnumerable<MarketplaceItemDto> FilteredItems
+    {
+        get
+        {
+            var filtered = marketplaceItems.AsEnumerable();
+
+            // Apply status filter
+            filtered = selectedFilter switch
+            {
+                "Active" => filtered.Where(x => x.Status == MarketplaceItemStatus.Active),
+                "Sold" => filtered.Where(x => x.Status == MarketplaceItemStatus.Sold),
+                "Flagged" => filtered.Where(x => x.Status == MarketplaceItemStatus.Flagged),
+                _ => filtered
+            };
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                filtered = filtered.Where(x =>
+                    x.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.SellerName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.Category.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return filtered;
+        }
+    }
+
+    private void SetFilter(string filter)
+    {
+        selectedFilter = filter;
+        dropdownOpenItemId = null;
+    }
+
+    private void UpdateSearch(string query)
+    {
+        searchQuery = query;
+        dropdownOpenItemId = null;
+    }
+
+    private async Task MarkAsSold(int itemId)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Mark as Sold",
+            Text = "Are you sure you want to mark this item as sold?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes, mark as sold",
+            CancelButtonText = "Cancel"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var updateResult = await AdminMarketplaceService.UpdateItemStatusAsync(itemId, MarketplaceItemStatus.Sold);
+            if (updateResult.IsSuccess)
+            {
+                await Swal.FireAsync("Success", "Item marked as sold", SweetAlertIcon.Success);
+                await LoadData();
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Failed to update item status", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task MarkAsFlagged(int itemId)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Mark as Flagged",
+            Text = "Are you sure you want to mark this item as flagged?",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes, mark as flagged",
+            CancelButtonText = "Cancel"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var updateResult = await AdminMarketplaceService.UpdateItemStatusAsync(itemId, MarketplaceItemStatus.Flagged);
+            if (updateResult.IsSuccess)
+            {
+                await Swal.FireAsync("Success", "Item marked as flagged", SweetAlertIcon.Success);
+                await LoadData();
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Failed to update item status", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private string GetStatusColor(MarketplaceItemStatus status)
+    {
+        return status switch
+        {
+            MarketplaceItemStatus.Active => "text-[#0FA90F]",
+            MarketplaceItemStatus.Sold => "text-gray-500",
+            MarketplaceItemStatus.Flagged => "text-[#E11D48]",
+            _ => "text-gray-500"
+        };
+    }
+
+    private string GetStatusBgColor(MarketplaceItemStatus status)
+    {
+        return status switch
+        {
+            MarketplaceItemStatus.Active => "bg-[#7EE22E]",
+            MarketplaceItemStatus.Sold => "bg-gray-300",
+            MarketplaceItemStatus.Flagged => "bg-[#E11D48]",
+            _ => "bg-gray-300"
+        };
+    }
+
+    private string GetStatusIcon(MarketplaceItemStatus status)
+    {
+        return status switch
+        {
+            MarketplaceItemStatus.Active => "fas fa-check-circle",
+            MarketplaceItemStatus.Sold => "fas fa-times-circle",
+            MarketplaceItemStatus.Flagged => "fas fa-flag",
+            _ => "fas fa-question-circle"
+        };
+    }
+
+    private int GetReportCount(int itemId)
+    {
+        return reports.Count(r => r.MarketplaceItemId == itemId);
+    }
+
+    private void ToggleDropdown(int itemId)
+    {
+        dropdownOpenItemId = dropdownOpenItemId == itemId ? null : itemId;
+    }
+}
