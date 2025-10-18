@@ -20,7 +20,7 @@
                     <p class="uppercase mb-3 tracking-wide font-semibold text-gray-400">Overview</p>
                     <ul class="space-y-3">
                         <li>
-                            <a href="/admin/dashboard" class="flex items-center gap-2 text-gray-900 font-semibold">
+                            <a href="/admin/dashboard" class="@GetNavLinkClass("/admin/dashboard")">
                                 <i class="fas fa-chart-bar text-[14px]"></i>
                                 Dashboard
                             </a>
@@ -32,19 +32,25 @@
                     <p class="uppercase mb-3 tracking-wide font-semibold text-gray-400">Management</p>
                     <ul class="space-y-3">
                         <li>
-                            <a href="/admin/users" class="flex items-center gap-2 text-gray-900 font-semibold">
+                            <a href="/admin/users" class="@GetNavLinkClass("/admin/users")">
                                 <i class="fas fa-users text-[14px]"></i>
                                 User Management
                             </a>
                         </li>
                         <li>
-                            <a href="/admin/marketplace" class="flex items-center gap-2 text-gray-900 font-semibold">
+                            <a href="/admin/reports" class="@GetNavLinkClass("/admin/reports")">
+                                <i class="far fa-flag text-[14px]"></i>
+                                Reports
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/admin/marketplace" class="@GetNavLinkClass("/admin/marketplace")">
                                 <i class="fas fa-shopping-bag text-[14px]"></i>
                                 Marketplace
                             </a>
                         </li>
                         <li>
-                            <a href="/admin/events" class="flex items-center gap-2 @(IsCurrentPage("/admin/events") ? "bg-[#7ED957] text-white rounded-md px-3 py-2" : "text-gray-900 font-semibold")" aria-current="@(IsCurrentPage("/admin/events") ? "page" : null)">
+                            <a href="/admin/events" class="@GetNavLinkClass("/admin/events")" aria-current="@(IsCurrentPage("/admin/events") ? "page" : null)">
                                 <i class="fas fa-calendar-alt text-[14px]"></i>
                                 Event Management
                             </a>
@@ -56,7 +62,7 @@
                     <p class="uppercase mb-3 tracking-wide font-semibold text-gray-400">System</p>
                     <ul class="space-y-3">
                         <li>
-                            <a href="/admin/settings" class="flex items-center gap-2 text-gray-900 font-semibold">
+                            <a href="/admin/settings" class="@GetNavLinkClass("/admin/settings")">
                                 <i class="fas fa-cog text-[14px]"></i>
                                 Settings
                             </a>
@@ -66,7 +72,7 @@
             </nav>
 
             <div class="flex items-center gap-3 bg-gray-100 rounded-lg p-3 m-5 select-none" style="min-height: 56px">
-                <div class="w-8 h-8 rounded-full bg-[#7ED957] flex items-center justify-center text-white font-semibold text-xs" aria-label="User  initials @adminInitials">
+                <div class="w-8 h-8 rounded-full bg-[#7ED957] flex items-center justify-center text-white font-semibold text-xs" aria-label="User initials @adminInitials">
                     @adminInitials
                 </div>
                 <div class="flex flex-col text-xs font-semibold text-gray-900 leading-tight">
@@ -85,7 +91,7 @@
             </div>
             <div class="flex items-center gap-3">
                 <div class="relative">
-                    <div @onclick="ToggleDropdown" class="w-8 h-8 rounded-full bg-[#7ED957] flex items-center justify-center text-white font-semibold text-xs cursor-pointer" aria-label="User  initials @adminInitials">
+                    <div @onclick="ToggleDropdown" class="w-8 h-8 rounded-full bg-[#7ED957] flex items-center justify-center text-white font-semibold text-xs cursor-pointer" aria-label="User initials @adminInitials">
                         @adminInitials
                     </div>
                     @if (isDropdownOpen)
@@ -197,5 +203,14 @@
     private bool IsCurrentPage(string path)
     {
         return NavigationManager.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetNavLinkClass(string path)
+    {
+        if (IsCurrentPage(path))
+        {
+            return "flex items-center gap-2 bg-[#7ED957] text-white rounded-md px-3 py-2";
+        }
+        return "flex items-center gap-2 text-gray-900 font-semibold";
     }
 }

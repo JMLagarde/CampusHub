@@ -56,6 +56,13 @@ namespace CampusHub.Presentation.Controllers
 
             return result.ToActionResult();
         }
+
+        [HttpDelete("items/{itemId}")]
+        public async Task<ActionResult> DeleteItem(int itemId)
+        {
+            var result = await _adminMarketplaceService.DeleteItemAsync(itemId);
+            return result.ToActionResult();
+        }
     }
 
     public class UpdateItemStatusRequest

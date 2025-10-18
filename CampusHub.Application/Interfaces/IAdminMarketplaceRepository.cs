@@ -14,5 +14,6 @@ namespace CampusHub.Application.Interfaces
         Task<Result<int>> GetActiveListingsCountAsync();
         Task<Result<int>> GetSoldListingsCountAsync();
         Task<Result<int>> GetFlaggedListingsCountAsync();
+        Task<Result> DeleteItemAsync(int itemId);
     }
 }

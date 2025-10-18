@@ -11,5 +11,6 @@ namespace CampusHub.Application.Interfaces
         Task<Result<AdminMarketplaceStatsDto>> GetMarketplaceStatsAsync();
         Task<Result> UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status);
         Task<Result> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null);
+        Task<Result> DeleteItemAsync(int itemId);
     }
 }

@@ -181,5 +181,26 @@ namespace CampusHub.Application.Repositories
                     .CausedBy(ex));
             }
         }
+
+        public async Task<Result> DeleteItemAsync(int itemId)
+        {
+            try
+            {
+                var item = await _context.MarketplaceItems.FindAsync(itemId);
+                if (item == null)
+                {
+                    return Result.Fail(new Error("Item not found"));
+                }
+
+                _context.MarketplaceItems.Remove(item);
+                await _context.SaveChangesAsync();
+                return Result.Ok();
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(new Error("Failed to delete item")
+                    .CausedBy(ex));
+            }
+        }
     }
 }

@@ -1033,7 +1033,7 @@ textarea {
 }
 
 .like-button {
-    position: absolute;
+    position: static;
     top: var(--spacing-2);
     right: var(--spacing-2);
     width: 2rem;
