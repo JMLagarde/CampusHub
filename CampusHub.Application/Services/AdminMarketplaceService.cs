@@ -131,6 +131,25 @@ namespace CampusHub.Application.Services
             }
         }
 
+        public async Task<Result> DeleteItemAsync(int itemId)
+        {
+            try
+            {
+                if (itemId <= 0)
+                {
+                    return Result.Fail(new Error("Invalid item ID"));
+                }
+
+                return await _adminMarketplaceRepository.DeleteItemAsync(itemId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting item {ItemId}", itemId);
+                return Result.Fail(new Error("An error occurred while deleting item")
+                    .CausedBy(ex));
+            }
+        }
+
         private static MarketplaceItemDto MapToDto(MarketplaceItem item)
         {
             return new MarketplaceItemDto
