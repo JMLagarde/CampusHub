@@ -1,8 +1,9 @@
-﻿using CampusHub.Application.DTOs;
-using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.Admin;
+using CampusHub.Application.DTO.Common;
 using CampusHub.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using CampusHub.Application.DTO.Events;
 //automapper
 namespace CampusHub.API.Controllers
 {

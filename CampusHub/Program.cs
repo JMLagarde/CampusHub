@@ -72,6 +72,7 @@ builder.Services.AddScoped<IMarketplaceRepository, MarketplaceRepository>();
 builder.Services.AddScoped<IAdminMarketplaceRepository, AdminMarketplaceRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<IAdminEventRepository, AdminEventRepository>();
+builder.Services.AddScoped<IAdminReportsRepository, AdminReportsRepository>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
@@ -79,6 +80,7 @@ builder.Services.AddScoped<IDropdownService, DropdownService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 builder.Services.AddScoped<IAdminMarketplaceService, AdminMarketplaceService>();
 builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IAdminReportsService, AdminReportsService>();
 
 builder.Services.AddScoped<IAdminEventService>(provider =>
 {

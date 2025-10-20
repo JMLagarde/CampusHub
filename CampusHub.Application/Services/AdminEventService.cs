@@ -1,5 +1,6 @@
-﻿using CampusHub.Application.DTO;
-using CampusHub.Application.DTOs;
+﻿using CampusHub.Application.DTO.Admin;
+using CampusHub.Application.DTO.Common;
+using CampusHub.Application.DTO.Events;
 using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using FluentResults;

@@ -1,4 +1,5 @@
-﻿using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.Common;
+using CampusHub.Application.DTO.User;
 using CampusHub.Application.Helpers;
 using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;

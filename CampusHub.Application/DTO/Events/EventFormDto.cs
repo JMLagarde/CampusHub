@@ -1,6 +1,6 @@
 ﻿using CampusHub.Domain.Entities;
 
-namespace CampusHub.Application.DTO
+namespace CampusHub.Application.DTO.Events
 {
     public class EventFormDto
     {

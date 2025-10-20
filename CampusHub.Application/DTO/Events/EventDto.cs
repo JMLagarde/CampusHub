@@ -1,6 +1,6 @@
 ﻿using CampusHub.Domain.Entities;
 
-namespace CampusHub.Application.DTOs
+namespace CampusHub.Application.DTO.Events
 {
     public class EventDto
     {

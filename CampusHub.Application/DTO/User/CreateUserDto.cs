@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CampusHub.Application.DTO
+namespace CampusHub.Application.DTO.User
 {
     public class CreateUserDto
     {

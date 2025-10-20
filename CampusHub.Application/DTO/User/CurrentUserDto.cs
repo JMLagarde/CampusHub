@@ -1,7 +1,7 @@
 ﻿using CampusHub.Domain.Entities;
 using System.ComponentModel.DataAnnotations;
 
-namespace CampusHub.Application.DTO
+namespace CampusHub.Application.DTO.User
 {
     public class CurrentUserDto
     {

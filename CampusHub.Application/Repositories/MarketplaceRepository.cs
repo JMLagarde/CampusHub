@@ -1,4 +1,4 @@
-﻿using CampusHub.Application.Interfaces;
+﻿﻿﻿﻿﻿﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +17,7 @@ namespace CampusHub.Application.Repositories
         {
             return await _context.MarketplaceItems
                 .AsNoTracking()
-                .Where(x => x.Status != MarketplaceItemStatus.Sold)
+                .Where(x => x.Status == MarketplaceItemStatus.Active)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
@@ -105,7 +105,7 @@ namespace CampusHub.Application.Repositories
         public async Task<IEnumerable<MarketplaceItem>> GetByLocationAsync(CampusLocation location)
         {
             return await _context.MarketplaceItems
-                .Where(x => x.Status != MarketplaceItemStatus.Sold && x.Location == location)
+                .Where(x => x.Status == MarketplaceItemStatus.Active && x.Location == location)
                 .Include(x => x.Likes)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();

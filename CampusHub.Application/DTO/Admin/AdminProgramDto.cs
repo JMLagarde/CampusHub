@@ -1,4 +1,4 @@
-﻿namespace CampusHub.Application.DTO
+﻿namespace CampusHub.Application.DTO.Admin
 {
     public class AdminProgramDto
     {

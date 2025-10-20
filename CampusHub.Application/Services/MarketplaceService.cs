@@ -1,9 +1,11 @@
 ﻿using FluentResults;
-using CampusHub.Application.DTO;
 using CampusHub.Application.Interfaces;
 using CampusHub.Application.Helpers;
 using CampusHub.Domain.Entities;
 using Microsoft.Extensions.Logging;
+using CampusHub.Application.DTO.Marketplace;
+using CampusHub.Application.DTO.User;
+using CampusHub.Application.DTO.Common;
 
 namespace CampusHub.Application.Services
 {

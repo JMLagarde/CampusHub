@@ -1,4 +1,4 @@
-﻿using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.Common;
 
 namespace CampusHub.Application.Interfaces
 {

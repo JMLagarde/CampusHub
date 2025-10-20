@@ -1,4 +1,5 @@
-﻿using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.Common;
+using CampusHub.Application.DTO.User;
 using FluentResults;
 using System.Collections.Generic;
 using System.Threading.Tasks;

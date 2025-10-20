@@ -1,4 +1,4 @@
-﻿using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.User;
 using CampusHub.Application.Interfaces;
 using FluentResults.Extensions.AspNetCore;
 using Microsoft.AspNetCore.Authorization;
