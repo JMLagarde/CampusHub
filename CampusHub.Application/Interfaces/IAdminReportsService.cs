@@ -5,13 +5,11 @@ using FluentResults;
 
 namespace CampusHub.Application.Interfaces
 {
-    public interface IAdminMarketplaceService
+    public interface IAdminReportsService
     {
-        Task<Result<List<MarketplaceItemDto>>> GetAllItemsAsync();
         Task<Result<List<ReportDto>>> GetAllReportsAsync();
-        Task<Result<AdminMarketplaceStatsDto>> GetMarketplaceStatsAsync();
-        Task<Result> UpdateItemStatusAsync(int itemId, MarketplaceItemStatus status);
+        Task<Result<AdminReportsStatsDto>> GetReportsStatsAsync();
         Task<Result> UpdateReportStatusAsync(int reportId, ReportStatus status, int adminUserId, string? adminNotes = null);
-        Task<Result> DeleteItemAsync(int itemId);
+        Task<Result> FlagItemAsync(int itemId, int adminUserId);
     }
 }

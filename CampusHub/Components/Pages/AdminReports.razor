@@ -1,0 +1,443 @@
+@page "/admin/reports"
+@layout Layout.AdminLayout
+@using CampusHub.Application.DTO
+@using CampusHub.Application.DTO.Admin
+@using CampusHub.Application.DTO.Marketplace
+@using CampusHub.Domain.Entities
+@using CurrieTechnologies.Razor.SweetAlert2
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject SweetAlertService Swal
+@inject CampusHub.Application.Interfaces.IAdminReportsService AdminReportsService
+
+<main class="p-6">
+    <section class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+        <div>
+            <h2 class="font-bold text-base leading-5 mb-1">
+                Reports Moderation
+            </h2>
+            <p class="text-xs text-gray-500 leading-4">
+                Review and moderate reported marketplace items
+            </p>
+        </div>
+        <div class="mt-3 md:mt-0">
+            <label class="sr-only" for="search">
+                Search reports
+            </label>
+            <input
+                class="w-full md:w-72 text-xs leading-4 text-gray-500 placeholder:text-gray-400 border border-gray-200 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                id="search"
+                placeholder="Search reports by reporter, item, or reason..."
+                type="search"
+                value="@searchQuery"
+                @oninput="@(e => UpdateSearch(e.Value?.ToString() ?? ""))" />
+        </div>
+    </section>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p class="mt-2 text-gray-600">Loading reports data...</p>
+        </div>
+    }
+    else
+    {
+        <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1">
+                    @stats.TotalReports
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Total Reports
+                </p>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1 text-[#E11D48]">
+                    @stats.PendingReports
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Pending
+                </p>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-6 text-center">
+                <p class="font-bold text-lg leading-6 mb-1 text-[#0FA90F]">
+                    @stats.ResolvedReports
+                </p>
+                <p class="text-xs text-gray-500 leading-4">
+                    Resolved
+                </p>
+            </div>
+        </section>
+
+        <section class="mb-4">
+            <nav class="inline-flex space-x-2 bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold leading-4 text-gray-700">
+                <button
+                    class="@(selectedFilter == "All" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1 font-bold"
+                    @onclick="@(() => SetFilter("All"))">
+                    All Reports (@reports.Count)
+                </button>
+                <button
+                    class="@(selectedFilter == "Pending" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1"
+                    @onclick="@(() => SetFilter("Pending"))">
+                    Pending (@stats.PendingReports)
+                </button>
+                <button
+                    class="@(selectedFilter == "Resolved" ? "bg-white" : "hover:bg-gray-200") rounded-full px-3 py-1"
+                    @onclick="@(() => SetFilter("Resolved"))">
+                    Resolved (@stats.ResolvedReports)
+                </button>
+            </nav>
+        </section>
+
+        <section>
+            <div class="border border-gray-200 rounded-lg p-4 text-xs text-gray-700">
+                <p class="mb-4">
+                    @selectedFilter Reports (@FilteredReports.Count())
+                </p>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="pb-2 font-semibold pr-4">Reporter</th>
+                                <th class="pb-2 font-semibold pr-4">Reported Item</th>
+                                <th class="pb-2 font-semibold pr-4">Reason</th>
+                                <th class="pb-2 font-semibold pr-4">Status</th>
+                                <th class="pb-2 font-semibold pr-4">Date</th>
+                                <th class="pb-2 font-semibold pr-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @if (!FilteredReports.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-gray-500">
+                                        No reports found matching your criteria.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var report in FilteredReports)
+                                {
+                                    <tr>
+                                        <td class="py-2 pr-4 min-w-[140px]">
+                                            <p class="font-semibold leading-4">@report.ReporterName</p>
+                                            <p class="text-[10px] text-gray-400 leading-3">ID: @report.ReporterId</p>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[160px]">
+                                            <p class="font-semibold leading-4">@report.ItemTitle</p>
+                                            <p class="text-[10px] text-gray-400 leading-3">ID: @report.MarketplaceItemId</p>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[120px]">
+                                            <p class="font-semibold leading-4">@report.Reason</p>
+                                            @if (!string.IsNullOrEmpty(report.Description))
+                                            {
+                                                <p class="text-[10px] text-gray-600 leading-3 line-clamp-2">@report.Description</p>
+                                            }
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[100px]">
+                                            <span class="@GetStatusBgColor(report.Status) text-white rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 select-none">
+                                                @report.Status.ToLower()
+                                            </span>
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[80px]">
+                                            @GetTimeAgo(report.CreatedAt)
+                                        </td>
+                                        <td class="py-2 pr-4 min-w-[40px]">
+                                            <div class="relative">
+                                                <button
+                                                    class="text-gray-600 hover:text-gray-800 px-2 py-1"
+                                                    @onclick="@(() => ToggleDropdown(report.Id))"
+                                                    @onclick:stopPropagation="true">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                @if (dropdownOpenReportId == report.Id)
+                                                {
+                                                    <div class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
+                                                        <button
+                                                            class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100"
+                                                            @onclick="@(() => { ViewDetails(report); dropdownOpenReportId = null; })"
+                                                            @onclick:stopPropagation="true">
+                                                            <i class="fas fa-eye mr-2"></i>View Details
+                                                        </button>
+                                                        <button
+                                                            class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100"
+                                                            @onclick="@(async () => { await MarkAsFlagged(report.MarketplaceItemId); dropdownOpenReportId = null; })"
+                                                            @onclick:stopPropagation="true">
+                                                            <i class="fas fa-flag mr-2"></i>Mark Item As Flagged
+                                                        </button>
+                                                        <button
+                                                            class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100"
+                                                            @onclick="@(async () => { await MarkAsResolved(report.Id); dropdownOpenReportId = null; })"
+                                                            @onclick:stopPropagation="true">
+                                                            <i class="fas fa-check-circle mr-2"></i>Mark As Resolved
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- View Details Modal -->
+    @if (selectedReport != null)
+    {
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- Header with Close Button -->
+                <div class="sticky top-0 bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+                    <h3 class="text-xl font-bold text-white">Report Details</h3>
+                    <button @onclick="CloseModal" class="text-white hover:bg-white/20 p-2 rounded-lg transition-all">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-6">
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Report Info -->
+                        <div class="border-b border-red-200 pb-4">
+                            <h2 class="text-2xl font-bold text-gray-900">@selectedReport.Reason</h2>
+                            <p class="text-sm text-red-600 font-semibold mt-1">Reported Item: @selectedReport.ItemTitle</p>
+                            <p class="text-xs text-gray-500 mt-2">Reported by @selectedReport.ReporterName on @selectedReport.CreatedAt.ToString("MMM dd, yyyy HH:mm")</p>
+                        </div>
+
+                        <!-- Status Badge -->
+                        <div>
+                            <span class="@GetStatusBgColor(selectedReport.Status) text-white rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                                @selectedReport.Status.ToLower()
+                            </span>
+                        </div>
+
+                        <!-- Description -->
+                        @if (!string.IsNullOrEmpty(selectedReport.Description))
+                        {
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-200">
+                                <h4 class="text-sm font-semibold text-red-700 uppercase tracking-wide mb-3">Description</h4>
+                                <p class="text-sm text-gray-700 leading-relaxed">@selectedReport.Description</p>
+                            </div>
+                        }
+
+                        <!-- Admin Notes -->
+                        @if (!string.IsNullOrEmpty(selectedReport.AdminNotes))
+                        {
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                <h4 class="text-sm font-semibold text-blue-700 uppercase tracking-wide mb-3">Admin Notes</h4>
+                                <p class="text-sm text-gray-700 leading-relaxed">@selectedReport.AdminNotes</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</main>
+}
+@code {
+    private ReportDto? selectedReport = null;
+    private List<ReportDto> reports = new();
+    private AdminReportsStatsDto stats = new();
+    private string selectedFilter = "All";
+    private string searchQuery = "";
+    private bool isLoading = true;
+    private int? dropdownOpenReportId = null;
+    private bool hasRendered = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hasRendered = true;
+            await JSRuntime.InvokeVoidAsync("eval", @"
+            document.addEventListener('click', () => {
+                if (window.closeDropdown) {
+                    window.closeDropdown();
+                }
+            });
+        ");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var reportsResult = await AdminReportsService.GetAllReportsAsync();
+            reports = reportsResult.Value ?? new List<ReportDto>();
+
+            var statsResult = await AdminReportsService.GetReportsStatsAsync();
+            stats = statsResult.Value ?? new AdminReportsStatsDto();
+        }
+        catch (Exception ex)
+        {
+            if (hasRendered)
+            {
+                await Swal.FireAsync("Error", "Failed to load reports data", SweetAlertIcon.Error);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private IEnumerable<ReportDto> FilteredReports
+    {
+        get
+        {
+            var filtered = reports.AsEnumerable();
+
+            // Apply status filter
+            switch (selectedFilter)
+            {
+                case "Pending":
+                    filtered = filtered.Where(x => x.Status == "Pending");
+                    break;
+                case "Resolved":
+                    filtered = filtered.Where(x => x.Status == "Resolved");
+                    break;
+                default:
+                    break;
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                filtered = filtered.Where(x =>
+                    x.ReporterName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.ItemTitle.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.Reason.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (x.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            return filtered;
+        }
+    }
+
+    private void SetFilter(string filter)
+    {
+        selectedFilter = filter;
+        dropdownOpenReportId = null;
+    }
+
+    private void UpdateSearch(string query)
+    {
+        searchQuery = query;
+        dropdownOpenReportId = null;
+    }
+
+    private string GetStatusBgColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "pending" => "bg-[#E11D48]",
+            "resolved" => "bg-[#0FA90F]",
+            _ => "bg-gray-300"
+        };
+    }
+
+    private void ToggleDropdown(int reportId)
+    {
+        dropdownOpenReportId = dropdownOpenReportId == reportId ? null : reportId;
+    }
+
+    private void ViewDetails(ReportDto report)
+    {
+        selectedReport = report;
+    }
+
+    private void CloseModal()
+    {
+        selectedReport = null;
+    }
+
+    private async Task MarkAsFlagged(int itemId)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Mark Item as Flagged",
+            Text = "Are you sure you want to mark this item as flagged?",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes, flag item",
+            CancelButtonText = "Cancel"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var flagResult = await Http.PutAsJsonAsync($"api/admin/reports/items/{itemId}/flag", new { AdminUserId = 1 }); // TODO: Get actual admin user ID
+            if (flagResult.IsSuccessStatusCode)
+            {
+                await Swal.FireAsync("Success", "Item marked as flagged", SweetAlertIcon.Success);
+                await LoadData();
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Failed to flag item", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task MarkAsResolved(int reportId)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Mark Report as Resolved",
+            Text = "Are you sure you want to mark this report as resolved?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes, mark as resolved",
+            CancelButtonText = "Cancel"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var updateResult = await Http.PutAsJsonAsync($"api/admin/reports/{reportId}/status", new UpdateReportStatusDto
+            {
+                Status = ReportStatus.Resolved,
+                AdminUserId = 1, // TODO: Get actual admin user ID
+                AdminNotes = "Resolved via admin panel"
+            });
+
+            if (updateResult.IsSuccessStatusCode)
+            {
+                await Swal.FireAsync("Success", "Report marked as resolved", SweetAlertIcon.Success);
+                await LoadData();
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Failed to update report status", SweetAlertIcon.Error);
+            }
+        }
+    }
+    private static string GetTimeAgo(DateTime date)
+    {
+        var timeSpan = DateTime.UtcNow - date;
+
+        if (timeSpan.TotalHours < 1)
+            return "Just now";
+        if (timeSpan.TotalDays < 1)
+            return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays} days ago";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)(timeSpan.TotalDays / 7)} weeks ago";
+
+        return $"{(int)(timeSpan.TotalDays / 30)} months ago";
+    }
+}
+  

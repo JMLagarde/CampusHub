@@ -1,6 +1,8 @@
 ﻿using FluentResults;
-using CampusHub.Application.DTO;
 using CampusHub.Domain.Entities;
+using CampusHub.Application.DTO.Marketplace;
+using CampusHub.Application.DTO.User;
+using CampusHub.Application.DTO.Common;
 
 namespace CampusHub.Application.Interfaces
 {

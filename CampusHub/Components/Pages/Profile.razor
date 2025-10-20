@@ -2,10 +2,14 @@
 @layout Layout.MainLayout
 @rendermode InteractiveServer
 @using CampusHub.Application.DTO
-@using CampusHub.Application.DTOs
+@using CampusHub.Application.DTO.Marketplace
 @using CampusHub.Application.Interfaces
 @using CampusHub.Domain.Entities
+@using CampusHub.Application.DTO.User
+@using CampusHub.Application.DTO.Common
+@using CampusHub.Application.DTO.Events
 @using CurrieTechnologies.Razor.SweetAlert2
+ng CurrieTechnologies.Razor.SweetAlert2
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject IUserService UserService

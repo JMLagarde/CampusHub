@@ -1,8 +1,10 @@
-﻿using CampusHub.Application.DTO;
-using CampusHub.Application.Interfaces;
+﻿using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using FluentResults.Extensions.AspNetCore;
+using CampusHub.Application.DTO.Marketplace;
+using CampusHub.Application.DTO.User;
+using CampusHub.Application.DTO.Common;
 
 namespace CampusHub.Presentation.Controllers
 {

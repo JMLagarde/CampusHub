@@ -1,4 +1,4 @@
-﻿using CampusHub.Application.DTOs;
+﻿using CampusHub.Application.DTO.Events;
 using CampusHub.Application.Interfaces;
 using CampusHub.Domain.Entities;
 using FluentResults;

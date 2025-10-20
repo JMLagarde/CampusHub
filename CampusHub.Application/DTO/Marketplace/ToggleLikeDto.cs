@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CampusHub.Application.DTO
+namespace CampusHub.Application.DTO.Marketplace
 {
     public class ToggleLikeDto
     {

@@ -1,4 +1,6 @@
-﻿using CampusHub.Application.DTO;
+﻿using CampusHub.Application.DTO.Common;
+using CampusHub.Application.DTO.Marketplace;
+using CampusHub.Application.DTO.User;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
