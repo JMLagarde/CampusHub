@@ -75,14 +75,21 @@ namespace CampusHub.Application.Services
                         .WithMetadata("StatusCode", 400));
                 }
                 var user = await _userRepository.GetByUsernameAsync(loginDto.Username);
-                if (user == null || user.Password != loginDto.Password)  
+                if (user == null || user.Password != loginDto.Password)
                 {
                     _logger.LogWarning("Invalid login attempt for username: {Username}", loginDto.Username);
                     return Result.Fail(new Error("Invalid username or password")
                         .WithMetadata("StatusCode", 401));
                 }
+
+                if (user.Status == "Banned")
+                {
+                    _logger.LogWarning("Login attempt for banned user: {Username}", loginDto.Username);
+                    return Result.Fail(new Error("Account banned")
+                        .WithMetadata("StatusCode", 403));
+                }
                 string redirectUrl = user.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true
-                    ? "/admin/events"
+                    ? "/admin/dashboard"
                     : "/main-marketplace";
                 _logger.LogInformation("Login successful for user {Username} with role {Role}, redirecting to {RedirectUrl}",
                     user.Username, user.Role, redirectUrl);

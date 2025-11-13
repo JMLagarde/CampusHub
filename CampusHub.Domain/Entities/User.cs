@@ -22,7 +22,8 @@ namespace CampusHub.Domain.Entities
         public string? ContactNumber { get; set; }
 
         public string? Role { get; set; } = "Student";
-        public DateTime? DateRegistered { get; set; } = DateTime.UtcNow; 
+        public string Status { get; set; } = "Active";
+        public DateTime? DateRegistered { get; set; } = DateTime.UtcNow;
 
         [Required]
         public string Password { get; set; } = string.Empty;

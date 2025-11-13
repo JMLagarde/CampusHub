@@ -1,12 +1,6 @@
-# TODO: Create AdminReports Page
+# TODO: Remove Last Active from Admin User Management
 
 ## Steps to Complete
-
-- [x] Create CampusHub.Application/Interfaces/IAdminReportsRepository.cs
-- [x] Create CampusHub.Application/Repositories/AdminReportsRepository.cs
-- [x] Create CampusHub.Application/Interfaces/IAdminReportsService.cs
-- [x] Create CampusHub.Application/Services/AdminReportsService.cs
-- [x] Create CampusHub/Controllers/AdminReportsController.cs
-- [x] Create CampusHub/Components/Pages/AdminReports.razor
-- [x] Update CampusHub/Components/Layout/AdminLayout.razor to add Reports link
-- [x] Test the page functionality and verify integration
+- [ ] Remove LastActive property from AdminUserDto.cs
+- [ ] Update AdminUserService.cs to not set LastActive in mapping
+- [ ] Update AdminUserManagement.razor to remove "Last: @user.LastActive" from Activity column

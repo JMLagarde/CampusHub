@@ -367,7 +367,7 @@
         {
             var filtered = marketplaceItems.AsEnumerable();
 
-            // Apply status filter
+            // status filter
             filtered = selectedFilter switch
             {
                 "Active" => filtered.Where(x => x.Status == MarketplaceItemStatus.Active),
@@ -376,7 +376,7 @@
                 _ => filtered
             };
 
-            // Apply search filter
+            // search filter
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 filtered = filtered.Where(x =>
