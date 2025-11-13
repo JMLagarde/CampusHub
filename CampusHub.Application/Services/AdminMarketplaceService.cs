@@ -30,8 +30,8 @@ namespace CampusHub.Application.Services
                     return Result.Fail(itemsResult.Errors);
                 }
 
-                var itemDtos = itemsResult.Value.Select(MapToDto).ToList();
-                return Result.Ok(itemDtos);
+                var itemDto = itemsResult.Value.Select(MapToDto).ToList();
+                return Result.Ok(itemDto);
             }
             catch (Exception ex)
             {
